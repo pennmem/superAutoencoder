@@ -40,6 +40,10 @@ from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, space_eval
 import hyperopt
 import xgboost as xgb
 import collections
+from sklearn.model_selection import RandomizedSearchCV
+from skopt import BayesSearchCV
+
+
 
 from noisy_classifier_class import*
 
@@ -368,8 +372,6 @@ def run_loso_xval(dataset, classifier_name = 'current', search_method = 'rand', 
     list_sessions = dataset['list']
     pow_mat = dataset['X']
 
-
-
     probs = np.empty_like(recalls, dtype=np.float)
     sessions = np.unique(event_sessions)
     probs_sessions = pd.DataFrame()
@@ -381,8 +383,6 @@ def run_loso_xval(dataset, classifier_name = 'current', search_method = 'rand', 
 
     for i,sess in enumerate(sessions):
         print("session " + str(sess) + "...")
-
-
         # training set
         probs_temp = np.empty_like(recalls, dtype = np.float)
         insample_mask = (event_sessions != sess)
@@ -396,43 +396,6 @@ def run_loso_xval(dataset, classifier_name = 'current', search_method = 'rand', 
         outsample_pow_mat = pow_mat[outsample_mask]
         outsample_recalls = recalls[outsample_mask]
 
-
-
-        # if classifier_name == 'L1':
-        #     ind_params = {'class_weight':'balanced', 'solver':'liblinear'}
-        #     best_params = opt_params(insample_pow_mat,insample_recalls, insample_sess, insample_list, classifier_name, ind_params, search_method, type_of_data, feature_select) # tuning parameters
-        #     ind_params.update(best_params)
-        #     print best_params['C']
-        #
-
-            #classifier = LogisticRegression(**ind_params)
-
-
-
-        # if (feature_select):
-        #     print "starting feature selection..."
-        #     rl = RL(normalize = False)
-        #     rl.fit(insample_pow_mat, insample_recalls)   # Randomized Logistic Regression
-        #     rl_scores_mat = rl.scores_.reshape(insample_pow_mat.shape[1]/N_frequency,N_frequency).T  # score matrix freq by elec
-        #     scores = scores + rl_scores_mat
-        #     # rl_scores_elec_avg = np.mean(rl_scores_mat,0) # average score across frequencies for each electrode
-        #     # rl_scores_elec_sd = np.std(rl_scores_mat,0) # standard deviation
-        #     # rl_scores_elec_ratio = rl_scores_elec_avg/rl_scores_elec_sd  # sharpe's ratio
-        #     # if choose_by == 'ratio':
-        #     #     sort_indices = np.argsort(rl_scores_elec_ratio)[::-1]
-        #     # else:
-        #     #     sort_indices = np.argsort(rl_scores_elec_avg)[::-1]
-        #     #
-        #     # indices_select = np.sort(sort_indices[0:n_select]) # sort the indices and select the top n_select electrodes
-        #     #
-        #     # indices_feature_select = np.array(np.apply_along_axis(make_frequency,0, np.array(indices_select, ndmin = 2))) # make 8 frequencies for each chosen electrode
-        #     # indices_feature_select = np.sort(indices_feature_select.reshape(1,N_frequency*n_select)[0]) # convert to an 1d array
-        #     #
-        #     # insample_pow_mat = insample_pow_mat[:,indices_feature_select]    # subselect the data
-        #     # outsample_pow_mat = outsample_pow_mat[:,indices_feature_select]
-
-        #print 'fitting ' + classifier_name + ' classifier ...'
-
         indices = np.where(insample_recalls ==1)[0]
         # scaling for class imbalance
         n_recalls = len(indices)
@@ -441,11 +404,50 @@ def run_loso_xval(dataset, classifier_name = 'current', search_method = 'rand', 
         # neg_weight = len(insample_recalls)/2.0/n_non_recalls
 
         if classifier_name == 'L2':
-            ind_params = {'class_weight':'balanced', 'solver':'saga'}
-            print(ind_params)
-            best_params = opt_params(insample_pow_mat,insample_recalls, insample_sess, insample_list, classifier_name, ind_params, search_method, type_of_data, feature_select) # tuning parameters
-            ind_params.update(best_params)
+
+
+
+            logo = LeaveOneGroupOut()  # create fold indices
+            ind_params = {'class_weight':'balanced', 'solver':'saga', 'penalty':'l2'}
             classifier = LogisticRegression(**ind_params)
+
+            print len(np.unique(insample_sess))
+            if len(np.unique(insample_sess)) > 1:
+                cv_generator = logo.split(insample_pow_mat,insample_recalls, insample_sess)
+            else:
+                skf = StratifiedKFold(n_splits = 5)
+                cv_generator = skf.get_n_splits(insample_pow_mat,insample_recalls)
+
+            cv_generator = list(cv_generator)
+
+
+            opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-10, 1.0e-3, 'log-uniform')})
+
+
+                        # callback handler
+            # def on_step(optim_result):
+            #     score = opt.best_score_
+            #     print("best score: %s" % score)
+            #     if score >= 0.98:
+            #         print('Interrupting!')
+            #         return True
+
+            opt.fit(insample_pow_mat, insample_recalls)
+            best_params = opt.best_params_
+            print("val. score: %s" % opt.best_params_)
+
+            print("val. score: %s" % opt.best_score_)
+
+            print("pass here")
+
+            #best_params = opt_params(insample_pow_mat,insample_recalls, insample_sess, insample_list, classifier_name, ind_params, search_method, type_of_data, feature_select) # tuning parameters
+            ind_params.update(best_params)
+            print ind_params
+
+
+            classifier = LogisticRegression(**ind_params)
+
+
 
         if classifier_name == 'L1':
             ind_params = {'class_weight':'balanced', 'solver':'liblinear'}
