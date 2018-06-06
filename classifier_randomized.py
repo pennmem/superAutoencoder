@@ -421,7 +421,7 @@ def run_loso_xval(dataset, classifier_name = 'current', search_method = 'rand', 
             cv_generator = list(cv_generator)
 
 
-            opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-10, 1.0e-3, 'log-uniform')})
+            opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-7, 1.0e-3, 'log-uniform')}, scoring= 'roc_auc')
 
 
                         # callback handler

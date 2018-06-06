@@ -86,5 +86,9 @@ print dataset_enc['X'].min()
 print dataset_enc['X'].max()
 
 result = run_loso_xval(dataset_enc, classifier_name = 'L2', search_method = 'rand', type_of_data = 'short',  feature_select= 0,  adjusted = 1, C_factor = 1.0e-4)
+print(result)
 
+
+
+result = run_loso_xval(dataset_enc, classifier_name = 'current', search_method = 'rand', type_of_data = 'short',  feature_select= 0,  adjusted = 1, C_factor = 1.0e-4)
 print(result)
