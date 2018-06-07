@@ -413,30 +413,36 @@ def run_loso_xval(dataset, classifier_name = 'current', search_method = 'rand', 
 
             print len(np.unique(insample_sess))
             if len(np.unique(insample_sess)) > 1:
-                cv_generator = logo.split(insample_pow_mat,insample_recalls, insample_sess)
+                #cv_generator = logo.split(insample_pow_mat,insample_recalls, insample_sess)
+                skf = StratifiedKFold(n_splits = 5)
+                cv_generator = skf.get_n_splits(insample_pow_mat,insample_recalls)
             else:
                 skf = StratifiedKFold(n_splits = 5)
                 cv_generator = skf.get_n_splits(insample_pow_mat,insample_recalls)
 
-            cv_generator = list(cv_generator)
+            print(cv_generator)
 
+            #cv_generator = list(cv_generator)
+            #n_jobs = len(cv_generator)
+            #print(n_jobs)
+            if type_of_data == 'long':
+                opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-12, 1.0e-4, 'log-uniform')}, scoring='roc_auc', n_jobs = 5, n_points = 3)
+            else:
+                opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-7, 1.0e-3, 'log-uniform')}, scoring='roc_auc', n_jobs = 5, n_points = 3)
 
-            opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-7, 1.0e-3, 'log-uniform')}, scoring= 'roc_auc')
-
-
-                        # callback handler
+            # callback handler
             # def on_step(optim_result):
             #     score = opt.best_score_
             #     print("best score: %s" % score)
-            #     if score >= 0.98:
+            #     if score >= 0.50:
             #         print('Interrupting!')
             #         return True
 
             opt.fit(insample_pow_mat, insample_recalls)
             best_params = opt.best_params_
             print("val. score: %s" % opt.best_params_)
-
             print("val. score: %s" % opt.best_score_)
+            print("total iteration: %d" % opt.total_iterations)
 
             print("pass here")
 

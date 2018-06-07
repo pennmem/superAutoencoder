@@ -39,6 +39,8 @@ print(subject)
 
 pow_mat_orig = []
 pow_mat_recon = []
+
+
 for experiment in ['RAM_FR1', 'RAM_CatFR1']:
     try:
 
@@ -79,8 +81,12 @@ for experiment in ['RAM_FR1', 'RAM_CatFR1']:
         t = time.time()
         pow_vec_orig = []
         pow_vec_recon = []
+        print(len(recon_files))
+        print(len(orig_files))
+        print (recon_files)
+        assert(len(recon_files) == len(events))
 
-        for i, (file_recon, file_orig) in enumerate(zip(recon_files[:10], orig_files[:10])):
+        for i, (file_recon, file_orig) in enumerate(zip(recon_files, orig_files)):
             if i%100 == 0:
                 print(i)
             fname_recon = subject_dir + file_recon
@@ -141,3 +147,11 @@ f.close()
 # dataset_enc['X'] = pow_mat_recon
 # dataset_enc['X'] = normalize_sessions(dataset_enc['X'], dataset_enc['session'])
 # result_mono = run_loso_xval(dataset_enc, classifier_name = 'current', search_method = 'tpe', type_of_data = 'rand',  feature_select= 0,  adjusted = 1, C_factor = 1.0)
+
+
+recon_files
+event_numbers =np.array([str.split(x, "_")[0] for x in recon_files], dtype = int)
+a = np.arange(1800)
+for i, num in enumerate(a):
+    if num not in event_numbers:
+        print(num)
