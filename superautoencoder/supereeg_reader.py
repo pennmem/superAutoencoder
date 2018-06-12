@@ -1,25 +1,20 @@
 
 
 # create time-series X object from raw data
-import ptsa
-import supereeg as se
-import numpy as np
-from ptsa.data.TimeSeriesX import TimeSeriesX
-from ptsa.data.filters import MonopolarToBipolarMapper
-from ptsa.data.filters import ButterworthFilter
-from ptsa.data.filters import (
-    MonopolarToBipolarMapper,
-    MorletWaveletFilterCpp
-)
-from ptsa.data.readers.ParamsReader import ParamsReader
-from collections import OrderedDict
-import os
 import glob
-import time
-from sklearn.externals import joblib
-from classifier import*
+import os
 import sys
-from helper_funcs import*
+import time
+
+import supereeg as se
+import xarray as xr
+from classifier import*
+from ptsa.data.readers import JsonIndexReader
+from ptsa.data.readers import ParamsReader
+from ptsa.data.readers import TalReader
+
+from superautoencoder.helper_funcs import*
+
 args = sys.argv
 index = int(args[1])
 
@@ -37,9 +32,17 @@ subjects = [x for x in subjects if x!='bad']
 subject = subjects[index]
 print(subject)
 
+
+
+#
+# import h5py
+# save_dir_file = rhino_root + '/scratch/tphan/superautoencoder/' +  subject +   '/power_test.hdf5'
+# if os.path.exists(save_dir_file):
+# 	print("removing {0} data".format(subject))
+# 	os.remove(save_dir_file)
+
 pow_mat_orig = []
 pow_mat_recon = []
-
 
 for experiment in ['RAM_FR1', 'RAM_CatFR1']:
     try:
@@ -76,41 +79,71 @@ for experiment in ['RAM_FR1', 'RAM_CatFR1']:
         except:
             print("not in lucy.owen")
 
-
-
         t = time.time()
         pow_vec_orig = []
         pow_vec_recon = []
         print(len(recon_files))
         print(len(orig_files))
-        print (recon_files)
+
         assert(len(recon_files) == len(events))
 
-        for i, (file_recon, file_orig) in enumerate(zip(recon_files, orig_files)):
+        experiment = 'FR1'
+        jr = JsonIndexReader(rhino_root + '/protocols/r1.json')  # Build JSON reader
+        pairs_path = jr.get_value('pairs', subject=subject, experiment=experiment)
+        tal_reader = TalReader(filename=pairs_path)
+        monopolar_channels = tal_reader.get_monopolar_channels()
+        bipolar_channels = tal_reader.get_bipolar_pairs()
+
+        recon_files = np.sort(recon_files)
+        orig_files = np.sort(orig_files)
+
+        data_orig_vec = []
+        data_recon_vec =[]
+
+
+        for i, (recon_file, orig_file) in enumerate(zip(recon_files, orig_files)):
             if i%100 == 0:
                 print(i)
-            fname_recon = subject_dir + file_recon
-            fname_orig = subject_dir + file_orig
+            fname_recon = subject_dir + recon_file
+            fname_orig = subject_dir + orig_file
             bo_orig = se.load(fname_orig)
             bo_recon = se.load(fname_recon)
             data_orig = create_time_seriesX_from_superEEG(bo_orig)
+
+            data_orig['channels'] = monopolar_channels
+            #data_orig = MonopolarToBipolarMapper(time_series = data_orig, bipolar_pairs = bipolar_channels).filter()
             data_recon = create_time_seriesX_from_superEEG(bo_recon)
 
-            pow_wavelet_orig = compute_log_power(data_orig)
-            pow_wavelet_recon = compute_log_power(data_recon)
-            pow_vec_orig.append(pow_wavelet_orig)
-            pow_vec_recon.append(pow_wavelet_recon)
+            ### Testing part
 
-        t_run = time.time()-t
+            data_orig_coords = list(zip(data_orig.attrs['x'], data_orig.attrs['y'], data_orig.attrs['z']))
+            data_recon_coords = list(zip(data_recon.attrs['x'], data_recon.attrs['y'], data_recon.attrs['z']))
 
-        pow_vec_orig = np.stack(pow_vec_orig)
-        pow_vec_recon = np.stack(pow_vec_recon)
+            data_orig_vec.append(data_orig)
+            data_recon_vec.append(data_recon_vec)
 
-        pow_vec_orig = pow_vec_orig.reshape((pow_vec_orig.shape[0], pow_vec_orig.shape[1]*pow_vec_orig.shape[2]))
-        pow_vec_recon = pow_vec_recon.reshape((pow_vec_recon.shape[0], pow_vec_recon.shape[1]*pow_vec_recon.shape[2]))
 
-        pow_mat_recon.append(pow_vec_recon)
-        pow_mat_orig.append(pow_vec_orig)
+        data_orig_array = concat_time_seriesX(data_orig_vec)
+
+
+            # indices = [i for (i,x) in enumerate(data_recon_coords) if x in data_orig_coords]
+            # data_recon[indices[0]].values
+            # data_orig[data_orig_coords == data_recon_coords[indices[0]]].values
+            #pow_wavelet_orig = compute_log_power(data_orig)
+            #pow_wavelet_recon = compute_log_power(data_recon)
+            #pow_vec_orig.append(pow_wavelet_orig)
+            #pow_vec_recon.append(pow_wavelet_recon)
+
+        # t_run = time.time()-t
+        #
+        # pow_vec_orig = np.stack(pow_vec_orig)
+        # pow_vec_recon = np.stack(pow_vec_recon)
+        #
+        # pow_vec_orig = pow_vec_orig.reshape((pow_vec_orig.shape[0], pow_vec_orig.shape[1]*pow_vec_orig.shape[2]))
+        # pow_vec_recon = pow_vec_recon.reshape((pow_vec_recon.shape[0], pow_vec_recon.shape[1]*pow_vec_recon.shape[2]))
+        #
+        # pow_mat_recon.append(pow_vec_recon)
+        # pow_mat_orig.append(pow_vec_orig)
 
     except:
         print("experiement {0} does not exist".format(experiment))
@@ -123,35 +156,10 @@ save_dir = rhino_root + '/scratch/tphan/superautoencoder/' +  subject +   '/'
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 
-f = h5py.File(save_dir + '/power.hdf5', 'w')
+f = h5py.File(save_dir + '/power_test.hdf5', 'w')
 f.create_dataset('orig', data = pow_mat_orig, dtype = 'f')
-f.create_dataset('recon', data = pow_mat_recon, dtype = 'f')
+#f.create_dataset('recon', data = pow_mat_recon, dtype = 'f')
 f.close()
 
 
-
-
-#f = h5py.File('mytestfile.hdf5', 'r')
-#
-# subject_dir = rhino_root + '/scratch/tphan/joint_classifier/FR1/' + subject + '/dataset_delib.pkl'
-# dataset = joblib.load(subject_dir)
-# sessions = np.unique(dataset['session'])
-# print(sessions)
-#
-# dataset_enc = select_phase(dataset)
-# dataset['X'] = normalize_sessions(dataset['X'], dataset['session'])
-# #dataset_aug = generate_data(dataset, n_repeat=2, sigma_noise=sigma_noise)
-# dataset_enc['X'] = normalize_sessions(dataset_enc['X'], dataset_enc['session'])
-# result = run_loso_xval(dataset_enc, classifier_name = 'current', search_method = 'tpe', type_of_data = 'rand',  feature_select= 0,  adjusted = 1, C_factor = 1.0)
-#
-# dataset_enc['X'] = pow_mat_recon
-# dataset_enc['X'] = normalize_sessions(dataset_enc['X'], dataset_enc['session'])
-# result_mono = run_loso_xval(dataset_enc, classifier_name = 'current', search_method = 'tpe', type_of_data = 'rand',  feature_select= 0,  adjusted = 1, C_factor = 1.0)
-
-
-recon_files
-event_numbers =np.array([str.split(x, "_")[0] for x in recon_files], dtype = int)
-a = np.arange(1800)
-for i, num in enumerate(a):
-    if num not in event_numbers:
-        print(num)
+arr = xr.DataArray(np.random.randn(2, 3),[('x', ['a', 'b']), ('y', [10, 20, 30])])

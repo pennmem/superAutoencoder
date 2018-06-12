@@ -1,47 +1,23 @@
-import numpy as np
-from scipy.stats.mstats import zscore
 import time
-import warnings
-from math import sqrt
-from random import shuffle
-from sklearn.metrics import roc_auc_score, roc_curve
-from sklearn.externals import joblib
-import collections
-import pandas as pd
-import matplotlib
-from matplotlib import pyplot as plt
-import pickle
-import numpy as np
-from matplotlib import pyplot as plt
-from sklearn.externals import joblib
-from sklearn import linear_model
-import seaborn as sns
 
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-import pandas as pd
-from math import sqrt
 import numpy as np
+import pandas as pd
 from scipy.stats.mstats import zscore
-from sklearn.linear_model import LogisticRegression  # L2
-from sklearn.ensemble import RandomForestClassifier as RF  # random forests
 from sklearn import svm # svm
+from sklearn.ensemble import RandomForestClassifier as RF  # random forests
+from sklearn.linear_model import LogisticRegression  # L2
 #import xgboost as xgb  # xgboost
-from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import LeaveOneGroupOut # leave one group out
 import sklearn.metrics
-from sklearn. preprocessing import minmax_scale
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedKFold
-from sklearn.feature_selection import SelectFromModel
-from sklearn.linear_model import RandomizedLogisticRegression as RL
 
-from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, space_eval
+from hyperopt import fmin, hp, STATUS_OK, space_eval
 import hyperopt
 import xgboost as xgb
 import collections
 
-from noisy_classifier_class import*
+from superautoencoder.noisy_classifier_class import*
 
 from functools import wraps
 
@@ -231,7 +207,7 @@ def opt_params(X,y, session, list_session, classifier_name, ind_params, search_m
         logo = LeaveOneGroupOut()  # create fold indices
         logo_generator = logo.split(X,y, session)
         #lolo_generator = logo.split(X,y, list_session)
-        skf = StratifiedKFold(n_splits = 5)
+        skf = StratifiedKFold(n_splits = 3)
         cv_generator = skf.get_n_splits(X,y)
 
         params_joint = ind_params.copy()
@@ -257,10 +233,10 @@ def opt_params(X,y, session, list_session, classifier_name, ind_params, search_m
 
         n_sessions = len(np.unique(session))
         if n_sessions >=2:
-            cross_scores = cross_val_score(clf, X,y, cv = logo_generator, scoring = 'roc_auc',  n_jobs = 10)
+            cross_scores = cross_val_score(clf, X,y, cv = logo_generator, scoring = 'roc_auc',  n_jobs = 3)
         else:
             #cross_scores = cross_val_score(clf, X,y, cv = lolo_generator, n_jobs = 10, scoring = 'roc_auc')
-            cross_scores = cross_val_score(clf, X,y, cv = cv_generator, n_jobs = 10, scoring = 'roc_auc')
+            cross_scores = cross_val_score(clf, X,y, cv = cv_generator, n_jobs = 3, scoring = 'roc_auc')
         return cross_scores.mean()
 
     # define search parameter space

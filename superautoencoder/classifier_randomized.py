@@ -1,51 +1,26 @@
-import numpy as np
-from scipy.stats.mstats import zscore
 import time
-import warnings
-from math import sqrt
-from random import shuffle
-from sklearn.metrics import roc_auc_score, roc_curve
-from sklearn.externals import joblib
-import collections
-import pandas as pd
-import matplotlib
-from matplotlib import pyplot as plt
-import pickle
-import numpy as np
-from matplotlib import pyplot as plt
-from sklearn.externals import joblib
-from sklearn import linear_model
-import seaborn as sns
 
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-import pandas as pd
-from math import sqrt
 import numpy as np
+import pandas as pd
 from scipy.stats.mstats import zscore
-from sklearn.linear_model import LogisticRegression  # L2
-from sklearn.ensemble import RandomForestClassifier as RF  # random forests
 from sklearn import svm # svm
+from sklearn.ensemble import RandomForestClassifier as RF  # random forests
+from sklearn.linear_model import LogisticRegression  # L2
 #import xgboost as xgb  # xgboost
-from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import LeaveOneGroupOut # leave one group out
 import sklearn.metrics
-from sklearn. preprocessing import minmax_scale
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedKFold
-from sklearn.feature_selection import SelectFromModel
-from sklearn.linear_model import RandomizedLogisticRegression as RL
 
-from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, space_eval
+from hyperopt import fmin, hp, STATUS_OK, space_eval
 import hyperopt
 import xgboost as xgb
 import collections
-from sklearn.model_selection import RandomizedSearchCV
 from skopt import BayesSearchCV
 
 
 
-from noisy_classifier_class import*
+from superautoencoder.noisy_classifier_class import*
 
 from functools import wraps
 
@@ -408,27 +383,27 @@ def run_loso_xval(dataset, classifier_name = 'current', search_method = 'rand', 
 
 
             logo = LeaveOneGroupOut()  # create fold indices
-            ind_params = {'class_weight':'balanced', 'solver':'saga', 'penalty':'l2'}
+            ind_params = {'class_weight':'balanced', 'solver':'liblinear', 'penalty':'l2'}
             classifier = LogisticRegression(**ind_params)
 
             print len(np.unique(insample_sess))
             if len(np.unique(insample_sess)) > 1:
-                #cv_generator = logo.split(insample_pow_mat,insample_recalls, insample_sess)
-                skf = StratifiedKFold(n_splits = 5)
-                cv_generator = skf.get_n_splits(insample_pow_mat,insample_recalls)
+                cv_generator = logo.split(insample_pow_mat,insample_recalls, insample_sess)
+                #skf = StratifiedKFold(n_splits = 5)
+                #cv_generator = skf.get_n_splits(insample_pow_mat,insample_recalls)
+                cv_generator = list(cv_generator)
+
             else:
                 skf = StratifiedKFold(n_splits = 5)
                 cv_generator = skf.get_n_splits(insample_pow_mat,insample_recalls)
 
-            print(cv_generator)
 
-            #cv_generator = list(cv_generator)
             #n_jobs = len(cv_generator)
             #print(n_jobs)
             if type_of_data == 'long':
-                opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-12, 1.0e-4, 'log-uniform')}, scoring='roc_auc', n_jobs = 5, n_points = 3)
+                opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-12, 1.0e-4, 'log-uniform')}, scoring='roc_auc', n_jobs = 2, n_points = 3)
             else:
-                opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-7, 1.0e-3, 'log-uniform')}, scoring='roc_auc', n_jobs = 5, n_points = 3)
+                opt = BayesSearchCV(classifier, cv = cv_generator, search_spaces= {'C':(1.0e-7, 1.0e-3, 'log-uniform')}, scoring='roc_auc')
 
             # callback handler
             # def on_step(optim_result):
@@ -440,7 +415,7 @@ def run_loso_xval(dataset, classifier_name = 'current', search_method = 'rand', 
 
             opt.fit(insample_pow_mat, insample_recalls)
             best_params = opt.best_params_
-            print("val. score: %s" % opt.best_params_)
+            print("params. : %s" % opt.best_params_)
             print("val. score: %s" % opt.best_score_)
             print("total iteration: %d" % opt.total_iterations)
 
