@@ -154,10 +154,10 @@ def create_model_one_layer(dropout_rate = 0.4, layers = [784,32], penalty = 0.0,
     input_eeg = Input(shape = (n_features,))
     hidden_units = layers[1:]
     model.add(Dense(hidden_units[0], input_dim = n_features, kernel_regularizer= regularizers.l2(penalty), activation = 'relu', name = 'encoder'))
-    model.add(BatchNormalization())
+    #model.add(BatchNormalization())
 
     model.add(Dense(layers[0], name = 'decoded'))
-    model.add(BatchNormalization())
+    #model.add(BatchNormalization())
     rmsprop = optimizers.RMSprop(lr= 1.0e-4, rho = 0.9)
 
     model.compile(optimizer = rmsprop, loss = 'mean_squared_error', metrics = [mse])
@@ -324,7 +324,7 @@ def build_prior_model(subject_current, rhino_root = '', threshold = 0.6, n_epoch
 
 def get_session_data(subject, rhino_root = ''):
 
-    subject_dir_auto = rhino_root + '/scratch/tphan/joint_classifier/FR1/' + subject + '/dataset_long_25.0.pkl'
+    subject_dir_auto = rhino_root + '/scratch/tphan/joint_classifier/FR1/' + subject + '/dataset_long_50.0.pkl'
     dataset_auto = joblib.load(subject_dir_auto)
     print dataset_auto[0]['pow'].shape
     try:

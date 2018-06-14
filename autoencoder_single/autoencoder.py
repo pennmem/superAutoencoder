@@ -36,7 +36,7 @@ rhino_root = '/Volumes/RHINO'
 all_subjects = np.array(os.listdir(rhino_root + '/scratch/tphan/joint_classifier/FR1/'))
 subject = all_subjects[index]
 print subject
-subject = 'R1001P'
+subject = 'R1032D'
 
 subject_dir = rhino_root + '/scratch/tphan/joint_classifier/FR1/' + subject + '/dataset.pkl'
 dataset = joblib.load(subject_dir)
@@ -66,7 +66,7 @@ print dataset_auto['X'].min()
 print dataset_auto['X'].max()
 
 #dataset_auto = dataset_enc
-corruption_level = 1.0
+corruption_level = 0.1
 
 probs_all=[]
 label_all =[]
@@ -98,7 +98,7 @@ if len(sessions) > 1:
         print("number of features = {0:4d}").format(n_features)
         print("number of events = {0:4d}").format(train_data.shape[0])
 
-        autoencoder_model = create_model(dropout_rate=0.4, layers = [n_features,512], activation= 'sigmoid', penalty = 0.0e-5)
+        autoencoder_model = create_model(dropout_rate=0.4, layers = [n_features,512], activation= 'relu', penalty = 0.0e-5)
         if n_features > 1000:
             callback = [EarlyStopping(monitor = 'val_loss', patience = 50, min_delta=0.01, mode = 'auto')]
         else:

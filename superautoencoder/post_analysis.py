@@ -2,13 +2,14 @@
 # version uses 222 subjects
 
 import os
-
+import numpy as np
 from sklearn.externals import joblib
 
-from superautoencoder.classifier import*
 
 rhino_root = '/Volumes/RHINO'
 all_subjects = np.sort(os.listdir(rhino_root + '/scratch/tphan/superautoencoder/'))
+#from superautoencoder import*
+
 
 auc_orig = []
 auc_supereeg = []
@@ -41,6 +42,7 @@ auc_orig = np.array(auc_orig)
 subject_list = np.array(subject_list)
 from scipy.stats import ttest_1samp
 
+ttest_1samp(auc_supereeg,0)
 
 auc_noise = np.array(auc_noise)
 auc_current = np.array(auc_current)
