@@ -42,7 +42,7 @@ def build_decoder(output_dim, latent_dim):
     return Model(z, output)
 
 
-def discriminator(latent_dim):
+def build_discriminator(latent_dim):
 
     model = Sequential()
     model.add(Dense(512, input_dim=latent_dim))
@@ -63,8 +63,8 @@ def discriminator(latent_dim):
 input_dim = 1000
 latent_dim = 256
 output_dim = input_dim
-discriminator= discriminator(latent_dim)
-optimizier = Adam(0.0002, 0.5)
+discriminator= build_discriminator(latent_dim)
+optimizer = Adam(0.0002, 0.5)
 discriminator.compile(loss = 'binary_crossentropy', optimizer = optimizier, metrics = ['accuracy'])
 encoder = build_encoder(input_dim, latent_dim)
 decoder = build_decoder(output_dim, latent_dim)
@@ -76,10 +76,10 @@ reconstructed_input = decoder(encoded_repr)
 
 discriminator.trainable = False
 validity = discriminator(encoded_repr)
-adversarial_autoencoder = Model(input, [reconstructed_input, validity])
+adversarial_autoencoder = Model(input, outputs = [reconstructed_input, validity])
 
 
-adversarial_autoencoder.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.999,0.001], optimizier = optimizier)
+adversarial_autoencoder.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.999,0.001], optimizer = optimizer)
 
 
 
