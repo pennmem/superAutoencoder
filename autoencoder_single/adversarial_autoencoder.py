@@ -60,12 +60,12 @@ def build_discriminator(latent_dim):
     return model
 
 
-input_dim = 1000
+input_dim = 784
 latent_dim = 256
 output_dim = input_dim
 discriminator= build_discriminator(latent_dim)
 optimizer = Adam(0.0002, 0.5)
-discriminator.compile(loss = 'binary_crossentropy', optimizer = optimizier, metrics = ['accuracy'])
+discriminator.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 encoder = build_encoder(input_dim, latent_dim)
 decoder = build_decoder(output_dim, latent_dim)
 
@@ -73,16 +73,63 @@ input = Input(shape = (input_dim,))
 encoded_repr = encoder(input)
 reconstructed_input = decoder(encoded_repr)
 
-
 discriminator.trainable = False
 validity = discriminator(encoded_repr)
 adversarial_autoencoder = Model(input, outputs = [reconstructed_input, validity])
-
-
 adversarial_autoencoder.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.999,0.001], optimizer = optimizer)
 
 
+# training
+batch_size = 12
+(X_train, _), (_, _) = mnist.load_data()
+X_train = (X_train.astype(np.float32) - 127.5) / 127.5
+X_train = np.expand_dims(X_train, axis=3)
+
+# adversarial ground truth
+valid = np.ones((batch_size,1))
+fake = np.zeros((batch_size,1))
+
+epochs = 200000
+
+for epoch in range(epochs):
+
+    idx = np.random.randint(0, X_train.shape[0], batch_size)
+    imgs = X_train[idx]
+    imgs = imgs.reshape(batch_size, np.prod(imgs.shape[1:]))
+    latent_fake = encoder.predict(imgs)
+    latent_real = np.random.normal(size = (batch_size, latent_dim))
+
+    d_loss_real = discriminator.train_on_batch(latent_real, valid)
+    d_loss_fake = discriminator.train_on_batch(latent_fake, fake)
+    d_loss = 0.5*np.add(d_loss_real, d_loss_fake)
+
+    g_loss = adversarial_autoencoder.train_on_batch(imgs, [imgs, valid])
+
+    if epoch%10 == 0:
+        print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, mse: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[0], g_loss[1]))
 
 
 
+latent_real = np.random.normal(size = (batch_size, latent_dim))
+fake_imgs = decoder.predict(latent_real)
+fake_imgs = fake_imgs.reshape((12,28,28))
 
+
+import matplotlib.pyplot as plt
+n = 10  # how many digits we will display
+plt.figure(figsize=(20, 4))
+for i in range(n):
+    # display original
+    ax = plt.subplot(2, n, i + 1)
+    plt.imshow(X_train[i,:,:,0])
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # display reconstruction
+    ax = plt.subplot(2, n, i + 1 + n)
+    plt.imshow(decoded_imgs[i].reshape(28, 28))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+plt.show()
