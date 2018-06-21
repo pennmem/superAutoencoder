@@ -205,7 +205,7 @@ def scale_sessions(pow_mat, event_sessions, pow_mat_ref = None, event_sessions_r
         sess_event_mask_ref = (event_sessions_ref == sess)
         mins = pow_mat_ref[sess_event_mask_ref].min(axis = 0)
         maxs = pow_mat_ref[sess_event_mask_ref].max(axis = 0)
-        pow_mat[sess_event_mask] = (pow_mat[sess_event_mask] - mins)
+        pow_mat[sess_event_mask] = (pow_mat[sess_event_mask] - mins)/(maxs-mins)
 
     return pow_mat
 
@@ -579,11 +579,31 @@ def get_sample_weights_fr(y):
     recall_mask = y == 1;
     n_recall = np.sum(recall_mask)
     n_non_recall = n - n_recall
+    pos_weight = 1.0*n/n_recall
+    neg_weight = 1.0*n/n_non_recall
+    weights[recall_mask] = pos_weight
+    weights[~recall_mask] = neg_weight
 
-    weights[recall_mask] = 1.0*n/n_recall
-    weights[~recall_mask] = 1.0*n/n_non_recall
+    return weights, pos_weight, neg_weight
 
-    return weights
+
+def get_gradients(model):
+    """Return the gradient of every trainable weight in model
+
+    Parameters
+    -----------
+    model : a keras model instance
+
+    First, find all tensors which are trainable in the model. Surprisingly,
+    `model.trainable_weights` will return tensors for which
+    trainable=False has been set on their layer (last time I checked), hence the extra check.
+    Next, get the gradients of the loss with respect to the weights.
+
+    """
+    weights = [tensor for tensor in model.trainable_weights if model.get_layer(tensor.name[:-2]).trainable]
+    optimizer = model.optimizer
+
+    return optimizer.get_gradients(model.total_loss, weights)
 
 
 # combined classifier

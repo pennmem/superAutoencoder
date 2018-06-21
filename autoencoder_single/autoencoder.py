@@ -26,7 +26,7 @@ import helper_funcs
 from helper_funcs import*
 import classifier
 from classifier import*
-
+from keras.utils import to_categorical
 
 args = sys.argv
 index = int(args[1])
@@ -113,6 +113,8 @@ if len(sessions) > 1:
             #validate_data_noisy = train_data_enc + corruption_level*np.random.normal(0,1.0, size = train_data_enc.shape)
             autoencoder_model.fit(train_data_noisy,train_data, epochs = 100, batch_size = 24, shuffle = True, validation_data = (validate_data,validate_data),
                             callbacks = callback)
+
+
 
         layer_name = 'encoder'
 
