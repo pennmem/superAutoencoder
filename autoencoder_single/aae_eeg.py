@@ -138,14 +138,14 @@ if len(sessions) > 1:
         adversarial_autoencoder = Model(input_noise, outputs = [reconstructed_input, validity])
         adversarial_autoencoder.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.99,0.01], optimizer = optimizer)
 
-        # classifier_tune = Model(input_noise, y_tilde)
-        # classifier_tune.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
+        classifier_tune = Model(input_noise, y_tilde)
+        classifier_tune.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
 
-        # input_C = Input(shape = (latent_dim,))
-        # y_tilde_C = L2_classifier(input_C)
-        # classifier_last = Model(input_C, y_tilde_C)
-        # classifier_last.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
+        input_C = Input(shape = (latent_dim,))
+        y_tilde_C = L2_classifier(input_C)
+        classifier_last = Model(input_C, y_tilde_C)
+        classifier_last.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
         # build a classifier based on code
         # training
@@ -160,7 +160,7 @@ if len(sessions) > 1:
         epochs = 2000
         sample_interval = 20
 
-        train_data_label = np.concatenate([train_data_label, y_ref])
+        #train_data_label = np.concatenate([train_data_label, y_ref])
         sample_weights, pos_weight, neg_weight = get_sample_weights_fr(train_data_label)
         class_weight = {0:neg_weight, 1:pos_weight}
 
@@ -190,7 +190,7 @@ if len(sessions) > 1:
             # train generator
             X_total = np.concatenate(train_data_enc, )
 
-
+            #
             g_loss = adversarial_autoencoder.train_on_batch(imgs_noise, [imgs, valid])
 
             idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
@@ -198,14 +198,14 @@ if len(sessions) > 1:
             imgs_enc_noise = imgs_enc + sigma_noise*np.random.normal(size = imgs_enc.shape)
             y_batch = train_data_label[idx]
             c_loss = classifier_tune.train_on_batch(imgs_enc_noise, y_batch, class_weight = class_weight)
-
-
+            #
+            #
             c_loss = [0,0]
             idx = np.random.randint(0, C_ref.shape[0], batch_size)
             C_ref_batch = C_ref[idx]
             y_ref_batch = y_ref[idx]
             c_prior_loss = classifier_last.train_on_batch(C_ref_batch, y_ref_batch, class_weight = class_weight)
-            #c_prior_loss = [0,0]
+            c_prior_loss = [0,0]
 
             # train classifier
             if epoch%200 == 0:
@@ -236,13 +236,18 @@ if len(sessions) > 1:
         training_code = encoder.predict(train_data_enc)
         ind_params = {'class_weight':'balanced', 'solver':'liblinear'}
 
-        # classifier = LogisticRegression(**ind_params)
-        # classifier.fit(training_code, train_data_label)
+        classifier = LogisticRegression(**ind_params)
+
+        training_code = np.concatenate([training_code, C_ref])
+        train_data_label = np.concatenate([train_data_label, y_ref])
+
+        classifier.fit(training_code, train_data_label)
         test_code = encoder.predict(test_data_enc)
         print "test code min ", test_code.min()
         print "test code max ", test_code.max()
 
-        probs = classifier_tune.predict(test_data_enc)
+        #probs = classifier_tune.predict(test_data_enc)
+        probs = classifier.predict(test_code)
         #print probs
         probs_all.append(probs)
         label_all.append(test_data_label_enc)

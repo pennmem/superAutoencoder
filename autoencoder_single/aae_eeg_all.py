@@ -170,6 +170,8 @@ if len(sessions) > 1:
         # #c_loss = classifier_tune.train_on_batch(imgs_enc_noise, y_batch, class_weight = class_weight)
         # c_loss = [0, 0]
         # train classifier
+
+
         if epoch%200 == 0:
             print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, mse: %f] [C loss: %f, acc: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[0], g_loss[1], c_loss[0], c_loss[1]))
             #sample_images(epoch, latent_dim, decoder, imgs)
