@@ -40,6 +40,9 @@ denoising = args[2]
 
 rhino_root = '/Volumes/RHINO'
 all_subjects = np.array(os.listdir(rhino_root + '/scratch/tphan/joint_classifier/FR1/'))
+
+
+
 subject = all_subjects[index]
 print subject
 #subject = 'R1415T'
@@ -84,22 +87,21 @@ probs_all=[]
 label_all =[]
 
 
-
 subject_ref_dir = rhino_root + '/scratch/tphan/adversarial_autoencoder/' + 'R1415T' + '/aae_result_use_all.pkl'
 dataset_ref = joblib.load(subject_ref_dir)
-
 
 y_ref = dataset_ref['y']
 C_ref = dataset_ref['X']
 
+
 if len(sessions) > 1:
     for sess in sessions:
+
 
         session = dataset_auto['session']
         session_mask = dataset_auto['session'] != sess
         train_data = dataset_auto['X'][session_mask]
         test_data = dataset_auto['X'][~session_mask]
-
 
         session_enc = dataset_enc['session']
         insample_list = dataset_enc['list']
@@ -148,7 +150,6 @@ if len(sessions) > 1:
         classifier_last.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
         # build a classifier based on code
-        # training
         batch_size = 24
 
         # adversarial ground truth
@@ -166,11 +167,11 @@ if len(sessions) > 1:
 
         for epoch in range(epochs):
 
-            # idx = np.random.randint(0, X_train.shape[0], batch_size)
-            # imgs = X_train[idx]
+            idx = np.random.randint(0, X_train.shape[0], batch_size)
+            imgs = X_train[idx]
 
-            idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
-            imgs = train_data_enc[idx]
+            # idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
+            # imgs = train_data_enc[idx]
             imgs_noise = imgs + sigma_noise*np.random.normal(size = imgs.shape)
             latent_fake = encoder.predict(imgs_noise)
 
@@ -184,28 +185,23 @@ if len(sessions) > 1:
             d_loss_real = discriminator.train_on_batch(latent_real, valid)
             d_loss_fake = discriminator.train_on_batch(latent_fake, fake)
             d_loss = 0.5*np.add(d_loss_real, d_loss_fake)
-
-            #print "before training adversarial", discriminator.predict(latent_real)
-
             # train generator
-            X_total = np.concatenate(train_data_enc, )
-
-            #
             g_loss = adversarial_autoencoder.train_on_batch(imgs_noise, [imgs, valid])
+            #
+            # idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
+            # imgs_enc = train_data_enc[idx]
+            # imgs_enc_noise = imgs_enc + sigma_noise*np.random.normal(size = imgs_enc.shape)
+            # y_batch = train_data_label[idx]
+            # c_loss = classifier_tune.train_on_batch(imgs_enc_noise, y_batch, class_weight = class_weight)
 
-            idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
-            imgs_enc = train_data_enc[idx]
-            imgs_enc_noise = imgs_enc + sigma_noise*np.random.normal(size = imgs_enc.shape)
-            y_batch = train_data_label[idx]
-            c_loss = classifier_tune.train_on_batch(imgs_enc_noise, y_batch, class_weight = class_weight)
-            #
-            #
-            c_loss = [0,0]
+
             idx = np.random.randint(0, C_ref.shape[0], batch_size)
             C_ref_batch = C_ref[idx]
             y_ref_batch = y_ref[idx]
             c_prior_loss = classifier_last.train_on_batch(C_ref_batch, y_ref_batch, class_weight = class_weight)
             c_prior_loss = [0,0]
+
+            c_loss = [0,0]
 
             # train classifier
             if epoch%200 == 0:
@@ -233,21 +229,23 @@ if len(sessions) > 1:
         #         #sample_images(epoch, latent_dim, decoder, imgs)
 
 
-        training_code = encoder.predict(train_data_enc)
-        ind_params = {'class_weight':'balanced', 'solver':'liblinear'}
+        #training_code = encoder.predict(train_data_enc)
+        #ind_params = {'class_weight':'balanced', 'solver':'liblinear'}
 
-        classifier = LogisticRegression(**ind_params)
+        #classifier = LogisticRegression(**ind_params)
 
-        training_code = np.concatenate([training_code, C_ref])
-        train_data_label = np.concatenate([train_data_label, y_ref])
+        #training_code = np.concatenate([training_code, C_ref])
+        #train_data_label = np.concatenate([train_data_label, y_ref])
 
-        classifier.fit(training_code, train_data_label)
+        #classifier.fit(training_code, train_data_label)
+
+
         test_code = encoder.predict(test_data_enc)
         print "test code min ", test_code.min()
         print "test code max ", test_code.max()
 
-        #probs = classifier_tune.predict(test_data_enc)
-        probs = classifier.predict(test_code)
+        probs = classifier_tune.predict(test_data_enc)
+        #probs = classifier.predict_proba(test_code)[:,1]
         #print probs
         probs_all.append(probs)
         label_all.append(test_data_label_enc)
@@ -270,3 +268,15 @@ if len(sessions) > 1:
     print result_all
 
 
+
+
+# plot distributions
+import seaborn as sns
+from scipy import stats, integrate
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(1,1)
+sns.set(color_codes= True)
+sns.distplot(training_code[:,0], ax = ax, color = 'green')
+sns.distplot(C_ref[:,0], ax = ax, color = 'red')
+
+fig.savefig('test.pdf')

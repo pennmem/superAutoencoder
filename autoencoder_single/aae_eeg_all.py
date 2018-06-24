@@ -38,15 +38,14 @@ print args
 index = int(args[1])
 denoising = args[2]
 
+
+
 rhino_root = '/Volumes/RHINO'
 all_subjects = np.array(os.listdir(rhino_root + '/scratch/tphan/joint_classifier/FR1/'))
 subject = all_subjects[index]
 print subject
 
-
-
 subject = 'R1415T'
-
 subject_dir = rhino_root + '/scratch/tphan/joint_classifier/FR1/' + subject + '/dataset.pkl'
 dataset = joblib.load(subject_dir)
 sessions = np.unique(dataset['session'])
@@ -124,19 +123,19 @@ if len(sessions) > 1:
 
 
     # training
-    batch_size = 12
+    batch_size = 24
 
     # adversarial ground truth
     valid = np.ones((batch_size,1))
     fake = np.zeros((batch_size,1))
 
 
-    n_epochs = 5
+    n_epochs = 1000
     n_iter = n_epochs*X_train.shape[0]/batch_size
 
     print n_iter
 
-    epochs = 2000
+    epochs = 1000
     sample_interval = 15
 
     sample_weights, pos_weight, neg_weight = get_sample_weights_fr(train_data_enc_label)
@@ -144,11 +143,12 @@ if len(sessions) > 1:
 
     for epoch in range(n_iter):
 
-        # idx = np.random.randint(0, X_train.shape[0], batch_size)
-        # imgs = X_train[idx]
+        idx = np.random.randint(0, X_train.shape[0], batch_size)
+        imgs = X_train[idx]
 
-        idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
-        imgs = train_data_enc[idx]
+
+        # idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
+        # imgs = train_data_enc[idx]
         imgs_noise = imgs + sigma_noise*np.random.normal(size = imgs.shape)
         latent_fake = encoder.predict(imgs_noise)
         latent_real = np.random.normal(size = (batch_size, latent_dim))
@@ -160,17 +160,15 @@ if len(sessions) > 1:
 
         #print "before training adversarial", discriminator.predict(latent_real)
 
-        # train generator
-        # g_loss = adversarial_autoencoder.train_on_batch(imgs_noise, [imgs, valid])
-        #
+        #train generator
+        g_loss = adversarial_autoencoder.train_on_batch(imgs_noise, [imgs, valid])
+
         # idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
         # imgs_enc = train_data_enc[idx]
         # imgs_enc_noise = imgs_enc + sigma_noise*np.random.normal(size = imgs_enc.shape)
         # y_batch = train_data_enc_label[idx]
-        # #c_loss = classifier_tune.train_on_batch(imgs_enc_noise, y_batch, class_weight = class_weight)
-        # c_loss = [0, 0]
-        # train classifier
-
+        # c_loss = classifier_tune.train_on_batch(imgs_enc_noise, y_batch, class_weight = class_weight)
+        c_loss = [0, 0]
 
         if epoch%200 == 0:
             print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, mse: %f] [C loss: %f, acc: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[0], g_loss[1], c_loss[0], c_loss[1]))
@@ -197,18 +195,20 @@ if len(sessions) > 1:
     #         print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, mse: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[0], g_loss[1]))
     #         #sample_images(epoch, latent_dim, decoder, imgs)
     #
-
+    training_all = encoder.predict(X_train)
 
     training_code = encoder.predict(train_data_enc)
     ind_params = {'class_weight':'balanced', 'solver':'liblinear'}
 
-        # classifier = LogisticRegression(**ind_params)
-        # classifier.fit(training_code, train_data_label)
+    classifier = LogisticRegression(**ind_params)
+    classifier.fit(training_code, train_data_enc_label)
     print "test code min", training_code.min()
     print "test code max", training_code.max()
 
 
-    probs = classifier_tune.predict(train_data_enc)
+    #probs = classifier_tune.predict(train_data_enc)
+    #probs = classifier.predict(train_data_enc)
+    probs = classifier.predict(training_code)
     #print probs
     probs_all.append(probs)
     label_all.append(train_data_enc_label)
@@ -234,3 +234,18 @@ if len(sessions) > 1:
     #result_all['L2'] = result_L2
     joblib.dump(result_all, save_dir + 'aae_result_use_all.pkl')
     print result_all
+
+
+
+
+# plot distributions
+import seaborn as sns
+from scipy import stats, integrate
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(8,1)
+sns.set(color_codes= True)
+for i in np.arange(8):
+    sns.distplot(training_all[:,i], ax = ax[i], color = 'green')
+    sns.distplot(np.random.normal(size = 1000), ax = ax[i], color = 'red')
+
+fig.savefig('test.pdf')
