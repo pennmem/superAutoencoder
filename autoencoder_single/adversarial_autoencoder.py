@@ -47,7 +47,7 @@ def build_decoder(output_dim, latent_dim):
     model.add(Dropout(0.4))
     # model.add(Dense(512))
     # model.add(LeakyReLU(alpha=0.2))
-    model.add(Dense(output_dim, activation = 'sigmoid')) # normalize data between -1 and 1
+    model.add(Dense(output_dim, activation = 'tanh')) # normalize data between -1 and 1
     model.summary()
     z = Input(shape = (latent_dim,))
     output = model(z)
@@ -174,7 +174,7 @@ def sample_images(epoch, latent_dim, decoder, X_train):
     fig.savefig("/home2/tungphan/superAutoencoder/autoencoder_single/images/mnist_%d_real.png" % epoch)
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
 
     input_dim = 784
     latent_dim = 10
@@ -224,7 +224,7 @@ if __name__ == 'main':
 
         if epoch%sample_interval == 0:
             print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, mse: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[0], g_loss[1]))
-            sample_images(epoch, latent_dim, decoder, imgs)
+            #sample_images(epoch, latent_dim, decoder, imgs)
 
     latent_real = np.random.normal(size = (batch_size, latent_dim))
     fake_imgs = decoder.predict(latent_real)
