@@ -25,7 +25,7 @@
         <entry file="file://$PROJECT_DIR$/autoencoder_single/classifier.py">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="612" column="18" selection-start-line="612" selection-start-column="18" selection-end-line="612" selection-end-column="18" />
+              <caret line="509" column="4" selection-start-line="509" selection-start-column="4" selection-end-line="509" selection-end-column="4" />
               <folding />
             </state>
           </provider>
@@ -65,11 +65,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="saae_helper_funcs.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="saae_helper_funcs.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/autoencoder_single/saae_helper_funcs.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.81106615">
-              <caret line="305" column="18" selection-start-line="305" selection-start-column="18" selection-end-line="305" selection-end-column="18" />
+            <state vertical-scroll-proportion="0.0">
+              <caret line="260" column="0" selection-start-line="260" selection-start-column="0" selection-end-line="260" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -79,7 +79,7 @@
         <entry file="file://$PROJECT_DIR$/autoencoder_single/aae_eeg.py">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="262" column="42" selection-start-line="262" selection-start-column="42" selection-end-line="262" selection-end-column="42" />
+              <caret line="34" column="0" selection-start-line="34" selection-start-column="0" selection-end-line="37" selection-end-column="20" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -91,7 +91,7 @@
         <entry file="file://$PROJECT_DIR$/autoencoder_single/aae_eeg_all.py">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="135" column="16" selection-start-line="135" selection-start-column="16" selection-end-line="135" selection-end-column="16" />
+              <caret line="95" column="0" selection-start-line="95" selection-start-column="0" selection-end-line="95" selection-end-column="0" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -99,11 +99,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="_axes.py" pinned="false" current-in-tab="false">
-        <entry file="file://$USER_HOME$/anaconda/envs/ramutils_delib/lib/python2.7/site-packages/matplotlib/axes/_axes.py">
+      <file leaf-file-name="saae_ram.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/autoencoder_single/saae_ram.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="6461" column="0" selection-start-line="6461" selection-start-column="0" selection-end-line="6461" selection-end-column="0" />
+            <state vertical-scroll-proportion="4.0039062">
+              <caret line="205" column="0" selection-start-line="205" selection-start-column="0" selection-end-line="205" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -113,7 +113,7 @@
         <entry file="file://$PROJECT_DIR$/autoencoder_single/aae_semi_supervised.py">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="171" column="62" selection-start-line="171" selection-start-column="62" selection-end-line="171" selection-end-column="62" />
+              <caret line="187" column="0" selection-start-line="187" selection-start-column="0" selection-end-line="187" selection-end-column="0" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -125,7 +125,7 @@
         <entry file="file://$PROJECT_DIR$/autoencoder_single/Keras_example.py">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="35" column="49" selection-start-line="35" selection-start-column="49" selection-end-line="35" selection-end-column="49" />
+              <caret line="38" column="0" selection-start-line="38" selection-start-column="0" selection-end-line="38" selection-end-column="0" />
               <folding>
                 <element signature="e#64#96#0" expanded="true" />
               </folding>
@@ -156,20 +156,21 @@
         <option value="$PROJECT_DIR$/autoencoder_single/helper_funcs.py" />
         <option value="$PROJECT_DIR$/superautoencoder/post_analysis.py" />
         <option value="$PROJECT_DIR$/autoencoder_single/GAN_example.py" />
-        <option value="$PROJECT_DIR$/autoencoder_single/Keras_example.py" />
         <option value="$PROJECT_DIR$/autoencoder_single/classifier.py" />
         <option value="$PROJECT_DIR$/autoencoder_single/autoencoder.py" />
         <option value="$PROJECT_DIR$/autoencoder_single/aae_semi_supervised.py" />
         <option value="$PROJECT_DIR$/autoencoder_single/cml_example.py" />
-        <option value="$PROJECT_DIR$/autoencoder_single/aae_eeg.py" />
         <option value="$PROJECT_DIR$/autoencoder_single/aae_eeg_all.py" />
         <option value="$PROJECT_DIR$/autoencoder_single/adversarial_autoencoder.py" />
         <option value="$PROJECT_DIR$/autoencoder_single/saae_helper_funcs.py" />
+        <option value="$PROJECT_DIR$/autoencoder_single/aae_eeg.py" />
+        <option value="$PROJECT_DIR$/autoencoder_single/Keras_example.py" />
+        <option value="$PROJECT_DIR$/autoencoder_single/saae_ram.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="7" />
+    <option name="x" value="54" />
     <option name="y" value="23" />
     <option name="width" value="2452" />
     <option name="height" value="1303" />
@@ -244,13 +245,14 @@
   <component name="PropertiesComponent">
     <property name="settings.editor.selected.configurable" value="PyConsoleConfigurable.Python Console" />
     <property name="settings.editor.splitter.proportion" value="0.2" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/autoencoder_single/saae_helper_funcs.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../python_algorithms" />
   </component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
-      <console-settings module-name="autoencoder_superEEG" sdk-home="$USER_HOME$/anaconda/envs/ramutils_delib/bin/python">
+      <console-settings module-name="autoencoder_superEEG" sdk-home="$USER_HOME$/anaconda/envs/ramutils_delib/bin/python" working-directory="$PROJECT_DIR$/autoencoder_single">
         <option name="mySdkHome" value="$USER_HOME$/anaconda/envs/ramutils_delib/bin/python" />
         <option name="myModuleName" value="autoencoder_superEEG" />
+        <option name="myWorkingDirectory" value="$PROJECT_DIR$/autoencoder_single" />
       </console-settings>
     </option>
   </component>
@@ -259,7 +261,7 @@
       <recent name="$PROJECT_DIR$/superautoencoder" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.autoencoder_all">
+  <component name="RunManager" selected="Python.saae_ram">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -433,6 +435,23 @@
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
     </configuration>
+    <configuration default="false" name="saae_ram" type="PythonConfigurationType" factoryName="Python">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/anaconda/envs/ramutils_delib/bin/python" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/autoencoder_single" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="autoencoder_superEEG" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/autoencoder_single/saae_ram.py" />
+      <option name="PARAMETERS" value="0" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <method />
+    </configuration>
     <configuration default="false" name="supereeg_reader" type="PythonConfigurationType" factoryName="Python">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -450,11 +469,12 @@
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
     </configuration>
-    <list size="4">
+    <list size="5">
       <item index="0" class="java.lang.String" itemvalue="Python.test_classifier" />
       <item index="1" class="java.lang.String" itemvalue="Python.autoencoder_single" />
       <item index="2" class="java.lang.String" itemvalue="Python.autoencoder_all" />
-      <item index="3" class="java.lang.String" itemvalue="Python.supereeg_reader" />
+      <item index="3" class="java.lang.String" itemvalue="Python.saae_ram" />
+      <item index="4" class="java.lang.String" itemvalue="Python.supereeg_reader" />
     </list>
   </component>
   <component name="ShelveChangesManager" show_recycled="false" />
@@ -481,7 +501,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="7" y="23" width="2452" height="1303" extended-state="0" />
+    <frame x="54" y="23" width="2452" height="1303" extended-state="0" />
     <editor active="false" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.14814815" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -540,13 +560,6 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/superautoencoder/classifier.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="456" column="0" selection-start-line="456" selection-start-column="0" selection-end-line="456" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/superautoencoder/classifier_randomized.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -831,30 +844,28 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/autoencoder_single/Keras_example.py">
+    <entry file="file://$USER_HOME$/anaconda/envs/ramutils_delib/lib/python2.7/site-packages/matplotlib/axes/_axes.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="35" column="49" selection-start-line="35" selection-start-column="49" selection-end-line="35" selection-end-column="49" />
-          <folding>
-            <element signature="e#64#96#0" expanded="true" />
-          </folding>
+        <state vertical-scroll-proportion="3.7173367">
+          <caret line="6461" column="0" selection-start-line="6461" selection-start-column="0" selection-end-line="6461" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/autoencoder_single/classifier.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="612" column="18" selection-start-line="612" selection-start-column="18" selection-end-line="612" selection-end-column="18" />
+          <caret line="509" column="4" selection-start-line="509" selection-start-column="4" selection-end-line="509" selection-end-column="4" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/autoencoder_single/helper_funcs.py">
+    <entry file="file://$PROJECT_DIR$/autoencoder_single/aae_eeg_all.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="319" column="69" selection-start-line="319" selection-start-column="69" selection-end-line="319" selection-end-column="69" />
+          <caret line="95" column="0" selection-start-line="95" selection-start-column="0" selection-end-line="95" selection-end-column="0" />
           <folding>
-            <element signature="e#0#9#0" expanded="true" />
+            <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -869,10 +880,20 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/anaconda/envs/ramutils_delib/lib/python2.7/site-packages/matplotlib/axes/_axes.py">
+    <entry file="file://$PROJECT_DIR$/autoencoder_single/aae_eeg.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="6461" column="0" selection-start-line="6461" selection-start-column="0" selection-end-line="6461" selection-end-column="0" />
+          <caret line="34" column="0" selection-start-line="34" selection-start-column="0" selection-end-line="37" selection-end-column="20" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/autoencoder_single/saae_helper_funcs.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="260" column="0" selection-start-line="260" selection-start-column="0" selection-end-line="260" selection-end-column="0" />
           <folding />
         </state>
       </provider>
@@ -880,29 +901,29 @@
     <entry file="file://$PROJECT_DIR$/autoencoder_single/aae_semi_supervised.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="171" column="62" selection-start-line="171" selection-start-column="62" selection-end-line="171" selection-end-column="62" />
+          <caret line="187" column="0" selection-start-line="187" selection-start-column="0" selection-end-line="187" selection-end-column="0" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/autoencoder_single/aae_eeg.py">
+    <entry file="file://$PROJECT_DIR$/autoencoder_single/Keras_example.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="262" column="42" selection-start-line="262" selection-start-column="42" selection-end-line="262" selection-end-column="42" />
+          <caret line="38" column="0" selection-start-line="38" selection-start-column="0" selection-end-line="38" selection-end-column="0" />
           <folding>
-            <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#64#96#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/autoencoder_single/aae_eeg_all.py">
+    <entry file="file://$PROJECT_DIR$/autoencoder_single/helper_funcs.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="135" column="16" selection-start-line="135" selection-start-column="16" selection-end-line="135" selection-end-column="16" />
+          <caret line="319" column="69" selection-start-line="319" selection-start-column="69" selection-end-line="319" selection-end-column="69" />
           <folding>
-            <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#0#9#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -915,10 +936,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/autoencoder_single/saae_helper_funcs.py">
+    <entry file="file://$PROJECT_DIR$/autoencoder_single/saae_ram.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.81106615">
-          <caret line="305" column="18" selection-start-line="305" selection-start-column="18" selection-end-line="305" selection-end-column="18" />
+        <state vertical-scroll-proportion="4.0039062">
+          <caret line="205" column="0" selection-start-line="205" selection-start-column="0" selection-end-line="205" selection-end-column="0" />
           <folding />
         </state>
       </provider>

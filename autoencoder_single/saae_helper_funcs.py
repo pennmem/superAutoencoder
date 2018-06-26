@@ -255,7 +255,7 @@ if __name__ == '__main__':
     valid = np.ones((batch_size,1))
     fake = np.zeros((batch_size,1))
 
-    n_epochs = 100
+    n_epochs = 200
     sample_interval = 200
     n_iter = n_epochs*X_train.shape[0]/batch_size
 
