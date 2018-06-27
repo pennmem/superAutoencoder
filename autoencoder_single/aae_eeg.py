@@ -135,12 +135,15 @@ if len(sessions) > 1:
 
         discriminator.trainable = False
         validity = discriminator(encoded_repr)
-        y_tilde = L2_classifier(encoded_repr)
 
         adversarial_autoencoder = Model(input_noise, outputs = [reconstructed_input, validity])
         adversarial_autoencoder.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.99,0.01], optimizer = optimizer)
 
+
+        encoder.trainable = False
+        y_tilde = L2_classifier(encoded_repr)
         classifier_tune = Model(input_noise, y_tilde)
+        print classifier_tune.summary()
         classifier_tune.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
 
@@ -155,30 +158,31 @@ if len(sessions) > 1:
         # adversarial ground truth
         valid = np.ones((batch_size,1))
         fake = np.zeros((batch_size,1))
-        n_epochs = 10
-        n_iter = n_epochs*X_train.shape[0]/batch_size
-        print n_iter
-        epochs = 2000
+        n_epochs = 200
+        n_iter = n_epochs*train_data_enc.shape[0]/batch_size
+
+        print("number of iterations {}".format(n_iter))
         sample_interval = 20
 
         #train_data_label = np.concatenate([train_data_label, y_ref])
         sample_weights, pos_weight, neg_weight = get_sample_weights_fr(train_data_label)
         class_weight = {0:neg_weight, 1:pos_weight}
 
-        for epoch in range(epochs):
+
+        for epoch in range(n_iter):
 
             idx = np.random.randint(0, X_train.shape[0], batch_size)
             imgs = X_train[idx]
 
-            # idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
-            # imgs = train_data_enc[idx]
+            idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
+            imgs = train_data_enc[idx]
             imgs_noise = imgs + sigma_noise*np.random.normal(size = imgs.shape)
             latent_fake = encoder.predict(imgs_noise)
 
 
-            #latent_real = np.random.normal(size = (batch_size, latent_dim))
-            idx_ref =  np.random.randint(0, dataset_ref['X'].shape[0], batch_size)
-            latent_real = dataset_ref['X'][idx_ref]
+            latent_real = np.random.normal(size = (batch_size, latent_dim))
+            # idx_ref =  np.random.randint(0, dataset_ref['X'].shape[0], batch_size)
+            # latent_real = dataset_ref['X'][idx_ref]
 
 
             # train discriminator
@@ -187,21 +191,23 @@ if len(sessions) > 1:
             d_loss = 0.5*np.add(d_loss_real, d_loss_fake)
             # train generator
             g_loss = adversarial_autoencoder.train_on_batch(imgs_noise, [imgs, valid])
-            #
-            # idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
-            # imgs_enc = train_data_enc[idx]
-            # imgs_enc_noise = imgs_enc + sigma_noise*np.random.normal(size = imgs_enc.shape)
-            # y_batch = train_data_label[idx]
-            # c_loss = classifier_tune.train_on_batch(imgs_enc_noise, y_batch, class_weight = class_weight)
 
 
-            idx = np.random.randint(0, C_ref.shape[0], batch_size)
-            C_ref_batch = C_ref[idx]
-            y_ref_batch = y_ref[idx]
-            c_prior_loss = classifier_last.train_on_batch(C_ref_batch, y_ref_batch, class_weight = class_weight)
+
+            idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
+            imgs_enc = train_data_enc[idx]
+            imgs_enc_noise = imgs_enc + sigma_noise*np.random.normal(size = imgs_enc.shape)
+            y_batch = train_data_label[idx]
+            c_loss = classifier_tune.train_on_batch(imgs_enc, y_batch, class_weight = class_weight)
+
+
+            # idx = np.random.randint(0, C_ref.shape[0], batch_size)
+            # C_ref_batch = C_ref[idx]
+            # y_ref_batch = y_ref[idx]
+            # c_prior_loss = classifier_last.train_on_batch(C_ref_batch, y_ref_batch, class_weight = class_weight)
             c_prior_loss = [0,0]
-
-            c_loss = [0,0]
+            #
+            # c_loss = [0,0]
 
             # train classifier
             if epoch%200 == 0:

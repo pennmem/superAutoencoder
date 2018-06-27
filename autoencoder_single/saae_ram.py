@@ -23,9 +23,9 @@ from classifier import*
 from helper_funcs import*
 
 
-def build_encoder(input_dim, latent_dim, N = 256, n_classes = 2):
+def build_encoder(input_dim, latent_dim, N = 64, n_classes = 2, penalty_param = 0):
     input = Input(shape = (input_dim,))
-    h = Dense(N)(input)
+    h = Dense(N, kernel_regularizer=regularizers.l2(penalty_param))(input)
     h = LeakyReLU(alpha=0.2)(h)
     h = Dropout(0.4)(h)
 
@@ -48,9 +48,9 @@ def build_encoder(input_dim, latent_dim, N = 256, n_classes = 2):
 
 
 # fix this later
-def build_decoder(output_dim, code_dim, N = 256, activation = 'sigmoid'):
+def build_decoder(output_dim, code_dim, N = 64, activation = 'sigmoid', penalty_param = 0):
     model = Sequential()
-    model.add(Dense(N, input_dim = code_dim))
+    model.add(Dense(N, input_dim = code_dim, kernel_regularizer=regularizers.l2(penalty_param)))
     model.add(LeakyReLU(alpha = 0.2))
     model.add(Dropout(0.4))
 
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     dataset_enc_temp['X'] = normalize_sessions(dataset_enc_temp['X'], dataset_enc_temp['session'])
     result_current = run_loso_xval(dataset_enc_temp, classifier_name = 'current', search_method = 'tpe', type_of_data = 'rand',  feature_select= 0,  adjusted = 1, C_factor = 1.0)
 
-
+    print result_current
 
     dataset_enc['X'] = scale_sessions(dataset_enc['X'], dataset_enc['session'], dataset_enc['X'], dataset_enc['session'])
     dataset_auto['X'] = scale_sessions(dataset_auto['X'], dataset_auto['session'], dataset_auto['X'], dataset_auto['session'])
@@ -240,38 +240,26 @@ if __name__ == '__main__':
     prob_all = []
     y_all = []
     for sess in sessions:
+
         all_sess_mask = dataset_auto['session'] == sess
         enc_sess_mask = dataset_enc['session'] == sess
-
         X_train_unlabeled = dataset_auto['X'][~all_sess_mask]
-
         print "number of samples = ", X_train_unlabeled.shape[0]
-
         X_train_labeled = dataset_enc['X'][~enc_sess_mask]
         y_train_labeled = dataset_enc['y'][~enc_sess_mask]
-
         X_test_labeled = dataset_enc['X'][enc_sess_mask]
         y_test_labeled = dataset_enc['y'][enc_sess_mask]
-
-
         y_test_labeled_cat = np.eye(n_classes)[y_test_labeled]
-
 
         # adversarial ground truth
         valid = np.ones((batch_size,1))
         fake = np.zeros((batch_size,1))
-
-
-
         input_dim = dataset_enc['X'].shape[1]
         output_dim = dataset_enc['X'].shape[1]
-
-
         discriminator_gauss= build_discriminator_gauss(latent_dim)
         discriminator_cat = build_discriminator_cat(n_classes)
         optimizer = Adam(0.0002, 0.5)
         corruption_level = 0.05
-
 
         discriminator_gauss.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
         discriminator_cat.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
@@ -279,10 +267,8 @@ if __name__ == '__main__':
         encoder, encoder_cat = build_encoder(input_dim, latent_dim, n_classes = n_classes)
         decoder = build_decoder(output_dim, latent_dim + n_classes)
 
-
         input = Input(shape = (input_dim,))
         z = encoder(input)
-
 
         y_cat = encoder_cat(input)
         encoded_repr = concatenate([y_cat, z])
@@ -294,8 +280,6 @@ if __name__ == '__main__':
         validity_gauss = discriminator_gauss(z)
         validity_cat = discriminator_cat(y_cat)
 
-        supervised_classifier = Model(input = input, output = y_cat)
-        supervised_classifier.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
         adversarial_gauss = Model(input, outputs = [reconstructed_input, validity_gauss])
         adversarial_gauss.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.999,0.001], optimizer = optimizer)
@@ -303,11 +287,14 @@ if __name__ == '__main__':
         adversarial_cat = Model(input, outputs = [reconstructed_input, validity_cat])
         adversarial_cat.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.999,0.001], optimizer = optimizer)
 
+        #encoder_cat.trainable = False
+        supervised_classifier = Model(input = input, output = y_cat)
+        supervised_classifier.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
+        print supervised_classifier.summary()
 
-
-        n_epochs = 30
+        n_epochs = 500
         sample_interval = 200
-        n_iter = n_epochs*X_train_unlabeled.shape[0]/batch_size
+        n_iter = n_epochs*X_train_labeled.shape[0]/batch_size
 
         sample_weights, pos_weight, neg_weight = get_sample_weights_fr(y_train_labeled)
         print pos_weight, neg_weight
@@ -329,7 +316,7 @@ if __name__ == '__main__':
 
             X_batch_unlabeled_noise = X_batch_unlabeled  + np.random.normal(0,1,size = X_batch_unlabeled.shape)*corruption_level
             latent_fake = encoder.predict(X_batch_unlabeled_noise)
-            latent_real = np.random.normal(size = (batch_size, latent_dim))
+            latent_real = np.random.normal(size = (batch_size, latent_dim))*5
 
             real_cat_dist = np.random.randint(low=0, high=n_classes, size=batch_size)
             real_cat_dist = np.eye(n_classes)[real_cat_dist]
@@ -355,6 +342,8 @@ if __name__ == '__main__':
             test_accuracy =  supervised_classifier.evaluate(X_test_labeled, y_test_labeled_cat, verbose = 0)
             y_pred = supervised_classifier.predict(X_test_labeled)[:,1]
             roc_val = roc_auc_score(y_test_labeled, y_pred)
+            roc_in = roc_auc_score(y_train_labeled, supervised_classifier.predict(X_train_labeled)[:,1])
+
             prob_all.append(y_pred)
             y_all.append(y_test_labeled)
 
@@ -363,7 +352,7 @@ if __name__ == '__main__':
                 print ("%d [D loss Gauss: %f, acc: %.2f%%] [G loss Gauss: %f, mse: %f]" % (epoch, d_loss_gauss[0], 100*d_loss_gauss[1], g_loss_gauss[0], g_loss_gauss[1]))
                 print ("%d [D loss Cat: %f, acc: %.2f%%] [G loss Cat: %f, mse: %f]" % (epoch, d_loss_cat[0], 100*d_loss_cat[1], g_loss_cat[0], g_loss_cat[1]))
                 print ("%d [Supervised Loss : %f, acc: %.2f%%] " % (epoch, supervised_loss[0], 100*supervised_loss[1]))
-                print ("%d [Validation Loss : %f, acc: %.2f%%, auc: %f] " % (epoch, test_accuracy[0], 100*test_accuracy[1], roc_val))
+                print ("%d [Validation Loss : %f, acc: %.2f%%, auc_val: %f, auc_in: %f] " % (epoch, test_accuracy[0], 100*test_accuracy[1], roc_val, roc_in))
                 print ("_____________________________________________")
 
             #if epoch%2000 == 0:

@@ -89,18 +89,14 @@ if len(sessions) > 1:
     train_data = dataset_auto['X']
     train_data_enc_label = dataset_enc['y']
     train_data_enc = dataset_enc['X']
-
-
     X_train = np.concatenate([train_data, train_data_enc], axis = 0)
     print "number of training samples", X_train.shape[0]
-
 
     discriminator= build_discriminator(latent_dim)
     optimizer = Adam(0.0002, 0.5)
     discriminator.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
     encoder = build_encoder(input_dim, latent_dim)
     decoder = build_decoder(output_dim, latent_dim)
-
 
     input_noise = Input(shape = (input_dim,))
     encoded_repr = encoder(input_noise)

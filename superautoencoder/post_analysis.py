@@ -12,9 +12,7 @@ all_subjects = np.sort(os.listdir(rhino_root + '/scratch/tphan/superautoencoder/
 
 
 auc_orig = []
-auc_supereeg = []
-auc_current = []
-auc_L2 = []
+auc_auto = []
 
 subject_list = []
 
@@ -22,12 +20,10 @@ subject_list = []
 
 for subject in all_subjects:
     try:
-        subject_dir_save = rhino_root + '/scratch/tphan/superautoencoder/' + subject + '/dataset_supereeg_result.pkl'
+        subject_dir_save = rhino_root + '/scratch/tphan/superautoencoder/' + subject + '/aae_semi_result_long.pkl'
         result = joblib.load(subject_dir_save)
-        auc_orig.append(result['mono']['comb'])
-        auc_supereeg.append(result['supereeg']['comb'])
-        auc_current.append(result['current']['comb'])
-        auc_L2.append(result['L2']['comb'])
+        auc_orig.append(result['current']['comb'])
+        auc_auto.append(result['aae'])
         subject_list.append(subject)
 
     except:
@@ -35,22 +31,13 @@ for subject in all_subjects:
 
 
 # testing
-auc_current = np.array(auc_current)
-auc_supereeg = np.array(auc_supereeg)
-auc_L2 = np.array(auc_L2)
-auc_orig = np.array(auc_orig)
+auc_current = np.array(auc_orig)
+auc_auto = np.array(auc_auto)
 subject_list = np.array(subject_list)
 from scipy.stats import ttest_1samp
-
-ttest_1samp(auc_supereeg,0)
-
-auc_noise = np.array(auc_noise)
-auc_current = np.array(auc_current)
-delta_auc = auc_noise- auc_current
-subject_list = np.array(subject_list)
+delta_auc = auc_auto - auc_current
 
 
-test =ttest_1samp(delta_auc,0)
 
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -66,4 +53,4 @@ ax.text( -0.02,  40,  '$\Delta = $' + str(round(np.mean(delta_auc),4)) , size = 
 fig.savefig('joint_reopt_result.pdf', dpi = 1000)
 
 result_frame = pd.DataFrame({'joint_current' : auc_current, 'joint_reopt' : auc_noise, 'subject':subject_list})
-result_frame.to_csv('auc_table.csv')--
+result_frame.to_csv('auc_table.csv')
