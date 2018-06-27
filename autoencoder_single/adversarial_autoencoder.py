@@ -29,9 +29,10 @@ def build_encoder(input_dim, latent_dim):
     # h = Dense(512)(h)
     # h = LeakyReLU(alpha=0.2)(h)
     mu = Dense(latent_dim)(h)
-    log_var = Dense(latent_dim)(h)
-    latent_repr = merge([mu, log_var], mode=lambda p: p[0] + K.random_normal(K.shape(p[0])) * K.exp(p[1] / 2),output_shape=lambda p: p[0])
-    model = Model(input, latent_repr)
+    #log_var = Dense(latent_dim)(h)
+    #latent_repr = merge([mu, log_var], mode=lambda p: p[0] + K.random_normal(K.shape(p[0])) * K.exp(p[1] / 2),output_shape=lambda p: p[0])
+
+    model = Model(input, mu)
     model.summary()
 
     return model

@@ -21,7 +21,7 @@ from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from keras.utils import np_utils
 import sys
-sys.path.append(os.getcwd() + '/autoencoder_single')
+sys.path.append(os.getcwd())
 from adversarial_autoencoder import*
 import helper_funcs
 from helper_funcs import*
@@ -139,18 +139,19 @@ if len(sessions) > 1:
         adversarial_autoencoder = Model(input_noise, outputs = [reconstructed_input, validity])
         adversarial_autoencoder.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.99,0.01], optimizer = optimizer)
 
-
-        encoder.trainable = False
+        for l in range(3):
+            encoder.layers[l].trainable = False
+        encoder.layers[4].trainable = True
         y_tilde = L2_classifier(encoded_repr)
         classifier_tune = Model(input_noise, y_tilde)
         print classifier_tune.summary()
         classifier_tune.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
 
-        input_C = Input(shape = (latent_dim,))
-        y_tilde_C = L2_classifier(input_C)
-        classifier_last = Model(input_C, y_tilde_C)
-        classifier_last.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
+        # input_C = Input(shape = (latent_dim,))
+        # y_tilde_C = L2_classifier(input_C)
+        # classifier_last = Model(input_C, y_tilde_C)
+        # classifier_last.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
         # build a classifier based on code
         batch_size = 24
@@ -158,7 +159,7 @@ if len(sessions) > 1:
         # adversarial ground truth
         valid = np.ones((batch_size,1))
         fake = np.zeros((batch_size,1))
-        n_epochs = 200
+        n_epochs = 1000
         n_iter = n_epochs*train_data_enc.shape[0]/batch_size
 
         print("number of iterations {}".format(n_iter))
