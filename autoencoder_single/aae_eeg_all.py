@@ -114,6 +114,7 @@ if len(sessions) > 1:
     adversarial_autoencoder = Model(input_noise, outputs = [reconstructed_input, validity])
     adversarial_autoencoder.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.99,0.01], optimizer = optimizer)
 
+
     classifier_tune = Model(input_noise, y_tilde)
     classifier_tune.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 

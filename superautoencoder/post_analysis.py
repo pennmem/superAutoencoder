@@ -20,7 +20,7 @@ subject_list = []
 
 for subject in all_subjects:
     try:
-        subject_dir_save = rhino_root + '/scratch/tphan/superautoencoder/' + subject + '/aae_semi_result_long.pkl'
+        subject_dir_save = rhino_root + '/scratch/tphan/superautoencoder/' + subject + '/aae_result_sigmoid.pkl'
         result = joblib.load(subject_dir_save)
         auc_orig.append(result['current']['comb'])
         auc_auto.append(result['aae'])
@@ -36,7 +36,7 @@ auc_auto = np.array(auc_auto)
 subject_list = np.array(subject_list)
 from scipy.stats import ttest_1samp
 delta_auc = auc_auto - auc_current
-
+ttest_1samp(delta_auc,0)
 
 
 import seaborn as sns
@@ -47,6 +47,8 @@ ax.set_xlabel('$\Delta$ AUC', size = 15)
 ax.set_title('Reopt - Current', size = 15)
 ax.tick_params(axis = 'both', labelsize = 15)
 ax.axvline(np.mean(delta_auc), color = 'red', lw = 3)
+
+
 ax.text( -0.02,  30,  str('p = 0.04') , size = 12)
 ax.text( -0.02,  40,  '$\Delta = $' + str(round(np.mean(delta_auc),4)) , size = 12)
 

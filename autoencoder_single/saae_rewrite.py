@@ -24,46 +24,34 @@ from classifier import*
 from helper_funcs import*
 
 
-def build_encoder(input_dim, latent_dim, N = 128, n_classes = 2, penalty = 0, n_hidden = 1):
+def build_encoder(input_dim, latent_dim, N = 64, n_classes = 2, penalty = 0, n_hidden = 1):
     input = Input(shape = (input_dim,))
+    h = Dense(N, kernel_regularizer=regularizers.l2(penalty))(input)
+    h = LeakyReLU(alpha=0.2)(h)
+    h = BatchNormalization()(h)
+        h = Dropout(0.4)(h)
 
     for i in range(n_hidden):
-        h = Dense(N, kernel_regularizer=regularizers.l2(penalty))(input)
         h = LeakyReLU(alpha=0.2)(h)
         h = BatchNormalization()(h)
         h = Dropout(0.4)(h)
-
-        # h = Dense(N)(input)
-        # h = LeakyReLU(alpha=0.2)(h)
-        # h = Dropout(0.4)(h)
-
-    # categorical model
-    y_cat = Dense(n_classes, activation= 'softmax')(h)  # softmax classifier
-
     # latent code model
     h = Dense(latent_dim)(h)
     h = LeakyReLU(alpha=0.2)(h)
     model_encoder = Model(input, h)
-    model_cat = Model(input, y_cat)
     model_encoder.summary()
-    return model_encoder, model_cat
+    return model_encoder
 
 
 # fix this later
-def build_decoder(output_dim, code_dim, N = 128, activation = 'sigmoid', penalty = 0, n_hidden =1 ):
+def build_decoder(output_dim, code_dim, N = 64, activation = 'sigmoid', penalty = 0, n_hidden =1 ):
     model = Sequential()
+    model.add(Dense(N, input_dim = code_dim, kernel_regularizer=regularizers.l2(penalty)))
 
     for i in range(n_hidden):
-        model.add(Dense(N, input_dim = code_dim, kernel_regularizer=regularizers.l2(penalty)))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(BatchNormalization())
         model.add(Dropout(0.4))
-
-    #
-    # model.add(Dense(N))
-    # model.add(LeakyReLU(alpha = 0.2))
-    # model.add(Dropout(0.4))
-
 
     model.add(Dense(output_dim, activation = activation)) # normalize data between -1 and 1
     model.summary()
@@ -75,11 +63,12 @@ def build_decoder(output_dim, code_dim, N = 128, activation = 'sigmoid', penalty
 
 
 # discriminate between code and prior distribution
-def build_discriminator_gauss(latent_dim, N = 128, n_hidden = 1):
+def build_discriminator_gauss(latent_dim, N = 64, n_hidden = 1):
 
     model = Sequential()
+    model.add(Dense(N, input_dim=latent_dim))
+
     for i in range(n_hidden):
-        model.add(Dense(N, input_dim=latent_dim))
         model.add(LeakyReLU(alpha =0.2))
         model.add(BatchNormalization())
         model.add(Dropout(0.4))
@@ -96,11 +85,12 @@ def build_discriminator_gauss(latent_dim, N = 128, n_hidden = 1):
 
 
 # discriminate category
-def build_discriminator_cat(n_classes, N = 128, n_hidden =1):
+def build_discriminator_cat(n_classes, N = 64, n_hidden =2):
 
     model = Sequential()
+    model.add(Dense(N, input_dim=n_classes))
+
     for i in range(n_hidden):
-        model.add(Dense(N, input_dim=n_classes))
         model.add(LeakyReLU(alpha =0.2))
         model.add(BatchNormalization())
         model.add(Dropout(0.4))
@@ -115,24 +105,6 @@ def build_discriminator_cat(n_classes, N = 128, n_hidden =1):
     model.summary()
     return model
 
-
-
-
-def build_discriminator_semi(latent_dim, N = 128):
-    print "type of latent_dim", type(latent_dim)
-    model = Sequential()
-    model.add(Dense(N, input_dim=latent_dim))
-    model.add(LeakyReLU(alpha =0.2))
-    model.add(Dropout(0.4))
-    model.add(Dense(3, activation = 'softmax'))
-    model.summary()
-    encoded_repr = Input(shape = (latent_dim,))
-    validity = model(encoded_repr)
-
-    model = Model(encoded_repr, validity)
-    model.summary()
-
-    return model
 
 def soft_max_classifier(latent_dim):
     print latent_dim
@@ -240,8 +212,6 @@ if __name__ == '__main__':
     dataset_enc['X'] = scale_sessions(dataset_enc['X'], dataset_enc['session'], dataset_enc['X'], dataset_enc['session'])
     dataset_auto['X'] = scale_sessions(dataset_auto['X'], dataset_auto['session'], dataset_auto['X'], dataset_auto['session'])
 
-
-
     # training
     batch_size = 12
 
@@ -257,12 +227,12 @@ if __name__ == '__main__':
         all_sess_mask = dataset_auto['session'] == sess
         enc_sess_mask = dataset_enc['session'] == sess
         X_train_unlabeled = dataset_auto['X'][~all_sess_mask]
+
         print "number of samples = ", X_train_unlabeled.shape[0]
         X_train_labeled = dataset_enc['X'][~enc_sess_mask]
         y_train_labeled = dataset_enc['y'][~enc_sess_mask]
         X_test_labeled = dataset_enc['X'][enc_sess_mask]
         y_test_labeled = dataset_enc['y'][enc_sess_mask]
-        y_test_labeled_cat = np.eye(n_classes)[y_test_labeled]
 
         # adversarial ground truth
         valid = np.ones((batch_size,1))
@@ -270,49 +240,39 @@ if __name__ == '__main__':
         #valid = np.random.uniform(0.7,1.2,size =(batch_size,1))
         #fake = np.random.uniform(0.0,0.3,size =(batch_size,1))
 
-
-
         input_dim = dataset_enc['X'].shape[1]
         output_dim = dataset_enc['X'].shape[1]
         discriminator_gauss= build_discriminator_gauss(latent_dim, n_hidden = n_hidden)
-        discriminator_cat = build_discriminator_cat(n_classes, n_hidden = n_hidden)
         optimizer = Adam(0.0002, 0.5)
         corruption_level = 0.05
 
         discriminator_gauss.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
-        discriminator_cat.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
-
-        encoder, encoder_cat = build_encoder(input_dim, latent_dim, n_classes = n_classes, n_hidden = n_hidden)
-        decoder = build_decoder(output_dim, latent_dim + n_classes, n_hidden = n_hidden)
+        encoder = build_encoder(input_dim, latent_dim, n_classes = n_classes, n_hidden = n_hidden)
+        decoder = build_decoder(output_dim, latent_dim , n_hidden = n_hidden)
 
         input = Input(shape = (input_dim,))
         z = encoder(input)
 
-        y_cat = encoder_cat(input)
-        encoded_repr = concatenate([y_cat, z])
-        reconstructed_input = decoder(encoded_repr)
-
+        reconstructed_input = decoder(z)
         discriminator_gauss.trainable = False
-        discriminator_cat.trainable = False
-
         validity_gauss = discriminator_gauss(z)
-        validity_cat = discriminator_cat(y_cat)
-
-
         adversarial_gauss = Model(input, outputs = [reconstructed_input, validity_gauss])
         adversarial_gauss.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.999,0.001], optimizer = optimizer)
 
-        adversarial_cat = Model(input, outputs = [reconstructed_input, validity_cat])
-        adversarial_cat.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.999,0.001], optimizer = optimizer)
 
-        #encoder_cat.trainable = False
-        # for l in range(2):
-        #     encoder_cat.layers[l].trainable = False
+        #discriminator_gauss.trainable = True
 
+        L2= soft_max_classifier(latent_dim)
+        y_cat = L2(encoder(input))
+
+        encoder.trainable = False
 
         supervised_classifier = Model(input = input, output = y_cat)
         supervised_classifier.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
+
         print "supervised classifier summary", supervised_classifier.summary()
+
+        #discriminator_gauss.trainable = True
 
         n_epochs = 2000
         sample_interval = 200
@@ -336,12 +296,12 @@ if __name__ == '__main__':
             y_batch_labeled = np.eye(n_classes)[y_batch_labeled]
 
             X_batch_unlabeled_noise = X_batch_unlabeled  + np.random.normal(0,1,size = X_batch_unlabeled.shape)*corruption_level
+
             latent_fake = encoder.predict(X_batch_unlabeled_noise)
             latent_real = np.random.normal(size = (batch_size, latent_dim))*5
 
             real_cat_dist = np.random.randint(low=0, high=n_classes, size=batch_size)
             real_cat_dist = np.eye(n_classes)[real_cat_dist]
-            fake_cat_dist = encoder_cat.predict(X_batch_unlabeled_noise)
 
             # Train Gaussian AN
             d_loss_gauss_real = discriminator_gauss.train_on_batch(latent_real, valid)
@@ -350,18 +310,12 @@ if __name__ == '__main__':
             g_loss_gauss = adversarial_gauss.train_on_batch(X_batch_unlabeled_noise, [X_batch_unlabeled, valid])
 
             # Train Cat AN
-            d_loss_cat_real = discriminator_cat.train_on_batch(real_cat_dist, valid)
-            d_loss_cat_fake = discriminator_cat.train_on_batch(fake_cat_dist, valid)
+            discriminator_gauss.predict(latent_real)
 
-
-            d_loss_cat_fake = discriminator_gauss.train_on_batch(latent_fake, fake)
-            d_loss_cat = 0.5*np.add(d_loss_gauss_real, d_loss_gauss_fake)
-            g_loss_cat = adversarial_cat.train_on_batch(X_batch_unlabeled_noise, [X_batch_unlabeled, valid])
 
            # if epoch%10 == 0: # update once in awhile
-            supervised_loss = supervised_classifier.train_on_batch(X_batch_labeled, y_batch_labeled, class_weight = class_weight)
-            test_accuracy =  supervised_classifier.evaluate(X_test_labeled, y_test_labeled_cat, verbose = 0)
 
+            supervised_loss = supervised_classifier.train_on_batch(X_batch_labeled, y_batch_labeled, class_weight = class_weight)
 
             roc_in = roc_auc_score(y_train_labeled, supervised_classifier.predict(X_train_labeled)[:,1])
             y_pred = supervised_classifier.predict(X_test_labeled)[:,1]
@@ -369,7 +323,6 @@ if __name__ == '__main__':
 
             if epoch%sample_interval == 0:
                 print ("%d [D loss Gauss: %f, acc: %.2f%%] [G loss Gauss: %f, mse: %f]" % (epoch, d_loss_gauss[0], 100*d_loss_gauss[1], g_loss_gauss[0], g_loss_gauss[1]))
-                print ("%d [D loss Cat: %f, acc: %.2f%%] [G loss Cat: %f, mse: %f]" % (epoch, d_loss_cat[0], 100*d_loss_cat[1], g_loss_cat[0], g_loss_cat[1]))
                 print ("%d [Supervised Loss : %f, acc: %.2f%%] " % (epoch, supervised_loss[0], 100*supervised_loss[1]))
                 print ("%d [Validation Loss : %f, acc: %.2f%%, auc_val: %f, auc_in: %f] " % (epoch, test_accuracy[0], 100*test_accuracy[1], roc_val, roc_in))
                 print ("_____________________________________________")
