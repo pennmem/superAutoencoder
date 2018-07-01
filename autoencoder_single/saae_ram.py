@@ -202,7 +202,7 @@ def load_dataset(index, rhino_root):
 
     all_subjects = np.array(os.listdir(rhino_root + '/scratch/tphan/joint_classifier/FR1/'))
     subject = all_subjects[index]
-    #subject = 'R1065J'
+    subject = 'R1391T'
     print subject
 
     subject_dir = rhino_root + '/scratch/tphan/joint_classifier/FR1/' + subject + '/dataset.pkl'
@@ -305,9 +305,10 @@ if __name__ == '__main__':
         adversarial_cat = Model(input, outputs = [reconstructed_input, validity_cat])
         adversarial_cat.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.999,0.001], optimizer = optimizer)
 
-        #encoder_cat.trainable = False
-        # for l in range(2):
-        #     encoder_cat.layers[l].trainable = False
+        n_encoders_layers = len(encoder_cat.layers)
+        print "encoder layers", encoder_cat.summary()
+        for l in range(n_encoders_layers-2):
+            encoder_cat.layers[l].trainable = False
 
 
         supervised_classifier = Model(input = input, output = y_cat)
@@ -343,13 +344,13 @@ if __name__ == '__main__':
             real_cat_dist = np.eye(n_classes)[real_cat_dist]
             fake_cat_dist = encoder_cat.predict(X_batch_unlabeled_noise)
 
-            # Train Gaussian AN
+            # Train Gaussian GAN
             d_loss_gauss_real = discriminator_gauss.train_on_batch(latent_real, valid)
             d_loss_gauss_fake = discriminator_gauss.train_on_batch(latent_fake, fake)
             d_loss_gauss = 0.5*np.add(d_loss_gauss_real, d_loss_gauss_fake)
             g_loss_gauss = adversarial_gauss.train_on_batch(X_batch_unlabeled_noise, [X_batch_unlabeled, valid])
 
-            # Train Cat AN
+            # Train Cat GAN
             d_loss_cat_real = discriminator_cat.train_on_batch(real_cat_dist, valid)
             d_loss_cat_fake = discriminator_cat.train_on_batch(fake_cat_dist, valid)
 

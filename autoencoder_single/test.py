@@ -9,81 +9,15 @@ from matplotlib import gridspec
 from keras.datasets import mnist
 
 
-
-
-# Get the MNIST data
-
-# Parameters
-input_dim = 784
-n_l1 = 1000
-n_l2 = 1000
-z_dim = 10
-batch_size = 100
-n_epochs = 1000
-learning_rate = 0.001
-beta1 = 0.9
-results_path = '/Volumes/RHINO/scratch/tphan/Results/Semi_Supervised'
-n_labels = 10
-n_labeled = 1000
-(X_train, y_train), (X_test, y_test) = mnist.load_data()
-
-
-
-# Placeholders for input data and the targets
-x_input = tf.placeholder(dtype=tf.float32, shape=[batch_size, input_dim], name='Input')
-x_input_l = tf.placeholder(dtype=tf.float32, shape=[batch_size, input_dim], name='Labeled_Input')
-y_input = tf.placeholder(dtype=tf.float32, shape=[batch_size, n_labels], name='Labels')
-x_target = tf.placeholder(dtype=tf.float32, shape=[batch_size, input_dim], name='Target')
-real_distribution = tf.placeholder(dtype=tf.float32, shape=[batch_size, z_dim], name='Real_distribution')
-categorial_distribution = tf.placeholder(dtype=tf.float32, shape=[batch_size, n_labels],
-                                         name='Categorical_distribution')
-manual_decoder_input = tf.placeholder(dtype=tf.float32, shape=[1, z_dim + n_labels], name='Decoder_input')
-
-
-def form_results():
-    """
-    Forms folders for each run to store the tensorboard files, saved models and the log files.
-    :return: three string pointing to tensorboard, saved models and log paths respectively.
-    """
-    folder_name = "/{0}_{1}_{2}_{3}_{4}_{5}_Semi_Supervised". \
-        format(datetime.datetime.now(), z_dim, learning_rate, batch_size, n_epochs, beta1)
-    tensorboard_path = results_path + folder_name + '/Tensorboard'
-    saved_model_path = results_path + folder_name + '/Saved_models/'
-    log_path = results_path + folder_name + '/log'
-    if not os.path.exists(results_path + folder_name):
-        os.mkdir(results_path + folder_name)
-        os.mkdir(tensorboard_path)
-        os.mkdir(saved_model_path)
-        os.mkdir(log_path)
-    return tensorboard_path, saved_model_path, log_path
-
-
-def generate_image_grid(sess, op):
-    """
-    Generates a grid of images by passing a set of numbers to the decoder and getting its output.
-    :param sess: Tensorflow Session required to get the decoder output
-    :param op: Operation that needs to be called inorder to get the decoder output
-    :return: None, displays a matplotlib window with all the merged images.
-    """
-    nx, ny = 10, 10
-    random_inputs = np.random.randn(10, z_dim) * 5.
-    sample_y = np.identity(10)
-    plt.subplot()
-    gs = gridspec.GridSpec(nx, ny, hspace=0.05, wspace=0.05)
-    i = 0
-    for r in random_inputs:
-        for t in sample_y:
-            r, t = np.reshape(r, (1, z_dim)), np.reshape(t, (1, n_labels))
-            dec_input = np.concatenate((t, r), 1)
-            x = sess.run(op, feed_dict={manual_decoder_input: dec_input})
-            ax = plt.subplot(gs[i])
-            i += 1
-            img = np.array(x.tolist()).reshape(28, 28)
-            ax.imshow(img, cmap='gray')
-            ax.set_xticks([])
-            ax.set_yticks([])
-            ax.set_aspect('auto')
-    plt.show()
+import matplotlib
+from keras.datasets import mnist
+import argparse
+import sys
+import os
+#sys.path.append(os.getcwd() + '/autoencoder_single')
+sys.path.append(os.getcwd())
+from classifier import*
+from helper_funcs import*
 
 
 def dense(x, n1, n2, name):
@@ -104,7 +38,7 @@ def dense(x, n1, n2, name):
 
 
 # The autoencoder network
-def encoder(x, reuse=False, supervised=False):
+def encoder(x, input_dim, z_dim, n_l1, n_l2, n_labels,reuse=False, supervised=False):
     """
     Encode part of the autoencoder.
     :param x: input to the autoencoder
@@ -120,14 +54,14 @@ def encoder(x, reuse=False, supervised=False):
         e_dense_2 = tf.nn.relu(dense(e_dense_1, n_l1, n_l2, 'e_dense_2'))
         latent_variable = dense(e_dense_2, n_l2, z_dim, 'e_latent_variable')
         cat_op = dense(e_dense_2, n_l2, n_labels, 'e_label')
-        if not supervised:
+        if supervised:
             softmax_label = tf.nn.softmax(logits=cat_op, name='e_softmax_label')
         else:
             softmax_label = cat_op
         return softmax_label, latent_variable
 
 
-def decoder(x, reuse=False):
+def decoder(x, input_dim, z_dim, n_l1, n_l2, n_labels, reuse=False):
     """
     Decoder part of the autoencoder.
     :param x: input to the decoder
@@ -143,7 +77,7 @@ def decoder(x, reuse=False):
         return output
 
 
-def discriminator_gauss(x, reuse=False):
+def discriminator_gauss(x, z_dim, n_l1, n_l2, reuse=False):
     """
     Discriminator that is used to match the posterior distribution with a given gaussian distribution.
     :param x: tensor of shape [batch_size, z_dim]
@@ -160,7 +94,7 @@ def discriminator_gauss(x, reuse=False):
         return output
 
 
-def discriminator_categorical(x, reuse=False):
+def discriminator_categorical(x, n_l1, n_l2, n_labels, reuse=False):
     """
     Discriminator that is used to match the posterior distribution with a given categorical distribution.
     :param x: tensor of shape [batch_size, n_labels]
@@ -177,7 +111,24 @@ def discriminator_categorical(x, reuse=False):
         return output
 
 
-def next_batch(x, y, batch_size):
+
+def load_dataset(index, rhino_root):
+
+    all_subjects = np.array(os.listdir(rhino_root + '/scratch/tphan/joint_classifier/FR1/'))
+    subject = all_subjects[index]
+    print subject
+
+    subject_dir = rhino_root + '/scratch/tphan/joint_classifier/FR1/' + subject + '/dataset.pkl'
+    dataset = joblib.load(subject_dir)
+    dataset_auto = get_session_data(subject, rhino_root)
+    dataset_enc = select_phase(dataset)
+
+    return dataset_enc, dataset_auto
+
+
+
+
+def next_batch(x,batch_size, y = None):
     """
     Used to return a random batch from the given inputs.
     :param x: Input images of shape [None, 784]
@@ -185,43 +136,178 @@ def next_batch(x, y, batch_size):
     :param batch_size: integer, batch size of images and labels to return
     :return: x -> [batch_size, 784], y-> [batch_size, 10]
     """
-    index = np.arange(n_labeled)
-    random_index = np.random.permutation(index)[:batch_size]
-    return x[random_index], y[random_index]
+    random_index = np.random.randint(0, x.shape[0], batch_size)
+    if np.sum(y) != None:
+        return x[random_index], y[random_index]
+    else:
+        return x[random_index]
 
 
-def train(train_model=True):
+def train(X_tl, y_tl, X_tul, X_vl, y_vl, train_model=True):
     """
     Used to train the autoencoder by passing in the necessary inputs.
     :param train_model: True -> Train the model, False -> Load the latest trained model and show the image grid.
     :return: does not return anything
     """
 
+
+    # Saving the model
+    step = 0
+    sess = tf.Session()
+    sess.run(init)
+
+    #x_l, y_l = mnist.test.next_batch(n_labeled)
+
+    for i in range(n_epochs):
+        n_batches = int(n_labeled / batch_size)
+        print("------------------Epoch {}/{}------------------".format(i, n_epochs))
+        for b in range(1, n_batches + 1):
+            z_real_dist = np.random.randn(batch_size, z_dim) * 5.
+            real_cat_dist = np.random.randint(low=0, high=2, size=batch_size)
+            real_cat_dist = np.eye(n_labels)[real_cat_dist]
+            #batch_x_ul, _ = mnist.train.next_batch(batch_size)
+
+            batch_x_ul = next_batch(X_tul, batch_size)
+
+            batch_x_l, batch_y_l = next_batch(X_tl, batch_size, y_tl)
+
+            batch_y_l_cat = np.eye(n_labels)[batch_y_l]
+
+            sess.run(autoencoder_optimizer, feed_dict={x_input: batch_x_ul, x_target: batch_x_ul})
+            sess.run(discriminator_g_optimizer,
+                     feed_dict={x_input: batch_x_ul, x_target: batch_x_ul, real_distribution: z_real_dist})
+            sess.run(discriminator_c_optimizer,
+                     feed_dict={x_input: batch_x_ul, x_target: batch_x_ul,
+                                categorial_distribution: real_cat_dist})
+            sess.run(generator_optimizer, feed_dict={x_input: batch_x_ul, x_target: batch_x_ul})
+            sess.run(supervised_encoder_optimizer, feed_dict={x_input_l: batch_x_l, y_input: batch_y_l_cat})
+
+
+            # if b % 20 == 0:
+            #
+            #     a_loss, d_g_loss, d_c_loss, g_loss, s_loss = sess.run(
+            #         [autoencoder_loss, dc_g_loss, dc_c_loss, generator_loss, supervised_encoder_loss],
+            #         feed_dict={x_input: batch_x_ul, x_target: batch_x_ul,
+            #                    real_distribution: z_real_dist, y_input: batch_y_l_cat, x_input_l: batch_x_l,
+            #                    categorial_distribution: real_cat_dist})
+            #
+            #
+            #     #writer.add_summary(summary, global_step=step)
+            #     print("Epoch: {}, iteration: {}".format(i, b))
+            #     print("Autoencoder Loss: {}".format(a_loss))
+            #     print("Discriminator Gauss Loss: {}".format(d_g_loss))
+            #     print("Discriminator Categorical Loss: {}".format(d_c_loss))
+            #     print("Generator Loss: {}".format(g_loss))
+            #     print("Supervised Loss: {}\n".format(s_loss))
+            step += 1
+        acc = 0
+        num_batches = int(X_tl.shape[0]/batch_size)
+
+    y_tl_cat = np.eye(n_labels)[y_tl]
+    y_vl_cat = np.eye(n_labels)[y_vl]
+    encoder_train_pred = sess.run(encoder_output_label_, feed_dict = {x_input_l:X_tl, y_input:y_tl_cat})
+    encoder_val_pred = sess.run(encoder_output_label_, feed_dict = {x_input_l:X_vl, y_input:y_vl_cat})
+    return encoder_val_pred[:,1]
+
+        # for j in range(num_batches):
+        #     # Classify unseen validation data instead of test data or train data
+        #     batch_x_l, batch_y_l = next_batch(X_vl, batch_size, y_vl)
+        #     batch_y_l_cat = np.eye(n_labels)[batch_y_l]
+        #     encoder_acc = sess.run(accuracy, feed_dict={x_input_l: batch_x_l, y_input: batch_y_l_cat})
+        #     acc += encoder_acc
+        # acc /= num_batches
+
+
+
+if __name__ == '__main__':
+
+
+    args = sys.argv
+    print args
+    index = int(args[1])
+    penalty = pow(10,-int(args[2]))
+
+    n_labels = 2
+
+    rhino_root = '/Volumes/RHINO'
+    #index =0
+    dataset_enc, dataset_auto = load_dataset(index, rhino_root)
+    sessions = np.unique(dataset_enc['session'])
+
+    dataset_enc_temp = dataset_enc
+    dataset_enc_temp['X'] = normalize_sessions(dataset_enc_temp['X'], dataset_enc_temp['session'])
+    result_current = run_loso_xval(dataset_enc_temp, classifier_name = 'current', search_method = 'tpe', type_of_data = 'rand',  feature_select= 0,  adjusted = 1, C_factor = 1.0)
+
+    print result_current
+
+    dataset_enc['X'] = scale_sessions(dataset_enc['X'], dataset_enc['session'], dataset_enc['X'], dataset_enc['session'])
+    dataset_auto['X'] = scale_sessions(dataset_auto['X'], dataset_auto['session'], dataset_auto['X'], dataset_auto['session'])
+
+
+
+    # training
+    batch_size = 24
+
+    #(X_train, y_train), (X_test, y_test) = mnist.load_data()
+    sessions = np.unique(dataset_enc['session'])
+
+    probs_all = []
+    y_all = []
+
+        # Parameters
+    input_dim = dataset_enc['X'].shape[1]
+    n_l1 = 64
+    n_l2 = 64
+    z_dim = 10
+    batch_size = 12
+    n_epochs = 1000
+    learning_rate = 0.001
+    beta1 = 0.9
+    n_labels = 2
+    n_labeled = dataset_enc['X'].shape[0]
+
+
+
+    # Placeholders for input data and the targets
+    x_input = tf.placeholder(dtype=tf.float32, shape=[None, input_dim], name='Input')
+    x_input_l = tf.placeholder(dtype=tf.float32, shape=[None, input_dim], name='Labeled_Input')
+    y_input = tf.placeholder(dtype=tf.float32, shape=[None, n_labels], name='Labels')
+    x_target = tf.placeholder(dtype=tf.float32, shape=[None, input_dim], name='Target')
+    real_distribution = tf.placeholder(dtype=tf.float32, shape=[None, z_dim], name='Real_distribution')
+    categorial_distribution = tf.placeholder(dtype=tf.float32, shape=[None, n_labels],
+                                             name='Categorical_distribution')
+    manual_decoder_input = tf.placeholder(dtype=tf.float32, shape=[1, z_dim + n_labels], name='Decoder_input')
+
     # Reconstruction Phase
     with tf.variable_scope(tf.get_variable_scope()):
-        encoder_output_label, encoder_output_latent = encoder(x_input)
+        encoder_output_label, encoder_output_latent = encoder(x_input, input_dim, z_dim, n_l1, n_l2, n_labels)
         # Concat class label and the encoder output
         decoder_input = tf.concat([encoder_output_label, encoder_output_latent], 1)
-        decoder_output = decoder(decoder_input)
+        decoder_output = decoder(decoder_input, input_dim, z_dim, n_l1, n_l2, n_labels)
+
+
 
     # Regularization Phase
     with tf.variable_scope(tf.get_variable_scope()):
-        d_g_real = discriminator_gauss(real_distribution)
-        d_g_fake = discriminator_gauss(encoder_output_latent, reuse=True)
+        d_g_real = discriminator_gauss(real_distribution, z_dim, n_l1, n_l2)
+        d_g_fake = discriminator_gauss(encoder_output_latent, z_dim, n_l1, n_l2,  reuse=True)
 
     with tf.variable_scope(tf.get_variable_scope()):
-        d_c_real = discriminator_categorical(categorial_distribution)
-        d_c_fake = discriminator_categorical(encoder_output_label, reuse=True)
+        d_c_real = discriminator_categorical(categorial_distribution, n_l1, n_l2, n_labels)
+        d_c_fake = discriminator_categorical(encoder_output_label, n_l1, n_l2, n_labels, reuse=True)
 
     # Semi-Supervised Classification Phase
     with tf.variable_scope(tf.get_variable_scope()):
-        encoder_output_label_, _ = encoder(x_input_l, reuse=True, supervised=True)
+        encoder_output_label_, _ = encoder(x_input_l, input_dim, z_dim, n_l1, n_l2, n_labels, reuse=True, supervised=True)
 
     # Generate output images
-    with tf.variable_scope(tf.get_variable_scope()):
-        decoder_image = decoder(manual_decoder_input, reuse=True)
+    # with tf.variable_scope(tf.get_variable_scope()):
+    #     decoder_image = decoder(manual_decoder_input, reuse=True)
 
     # Classification accuracy of encoder
+
+    pred = tf.nn.softmax(encoder_output_label_)
+
     correct_pred = tf.equal(tf.argmax(encoder_output_label_, 1), tf.argmax(y_input, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
@@ -273,107 +359,91 @@ def train(train_model=True):
 
     init = tf.global_variables_initializer()
 
-    # Reshape immages to display them
-    input_images = tf.reshape(x_input, [-1, 28, 28, 1])
-    generated_images = tf.reshape(decoder_output, [-1, 28, 28, 1])
-
-    # Tensorboard visualization
-    tf.summary.scalar(name='Autoencoder Loss', tensor=autoencoder_loss)
-    tf.summary.scalar(name='Discriminator gauss Loss', tensor=dc_g_loss)
-    tf.summary.scalar(name='Discriminator categorical Loss', tensor=dc_c_loss)
-    tf.summary.scalar(name='Generator Loss', tensor=generator_loss)
-    tf.summary.scalar(name='Supervised Encoder Loss', tensor=supervised_encoder_loss)
-    tf.summary.histogram(name='Encoder Gauss Distribution', values=encoder_output_latent)
-    tf.summary.histogram(name='Real Gauss Distribution', values=real_distribution)
-    tf.summary.histogram(name='Encoder Categorical Distribution', values=encoder_output_label)
-    tf.summary.histogram(name='Real Categorical Distribution', values=categorial_distribution)
-    tf.summary.image(name='Input Images', tensor=input_images, max_outputs=10)
-    tf.summary.image(name='Generated Images', tensor=generated_images, max_outputs=10)
-    summary_op = tf.summary.merge_all()
-
-    # Saving the model
-    saver = tf.train.Saver()
-    step = 0
-    with tf.Session() as sess:
-        if train_model:
-            #tensorboard_path, saved_model_path, log_path = form_results()
-            sess.run(init)
-            #writer = tf.summary.FileWriter(logdir=tensorboard_path, graph=sess.graph)
-
-            #x_l, y_l = mnist.test.next_batch(n_labeled)
-            x_l = X_train[:n_labeled,:,:]
-            y_l = y_train[:n_labeled]
 
 
-            for i in range(n_epochs):
-                n_batches = int(n_labeled / batch_size)
-                print("------------------Epoch {}/{}------------------".format(i, n_epochs))
-                for b in range(1, n_batches + 1):
-                    z_real_dist = np.random.randn(batch_size, z_dim) * 5.
-                    real_cat_dist = np.random.randint(low=0, high=10, size=batch_size)
-                    real_cat_dist = np.eye(n_labels)[real_cat_dist]
-                    #batch_x_ul, _ = mnist.train.next_batch(batch_size)
+    for session in sessions:
 
-                    batch_x_ul, batch_y_ul = next_batch(X_train,y_train, batch_size = batch_size)
-
-                    batch_x_l, batch_y_l = next_batch(x_l, y_l, batch_size=batch_size)
-
-
-                    sess.run(autoencoder_optimizer, feed_dict={x_input: batch_x_ul, x_target: batch_x_ul})
-                    sess.run(discriminator_g_optimizer,
-                             feed_dict={x_input: batch_x_ul, x_target: batch_x_ul, real_distribution: z_real_dist})
-                    sess.run(discriminator_c_optimizer,
-                             feed_dict={x_input: batch_x_ul, x_target: batch_x_ul,
-                                        categorial_distribution: real_cat_dist})
-                    sess.run(generator_optimizer, feed_dict={x_input: batch_x_ul, x_target: batch_x_ul})
-                    sess.run(supervised_encoder_optimizer, feed_dict={x_input_l: batch_x_l, y_input: batch_y_l})
-                    if b % 5 == 0:
-                        a_loss, d_g_loss, d_c_loss, g_loss, s_loss, summary = sess.run(
-                            [autoencoder_loss, dc_g_loss, dc_c_loss, generator_loss, supervised_encoder_loss,
-                             summary_op],
-                            feed_dict={x_input: batch_x_ul, x_target: batch_x_ul,
-                                       real_distribution: z_real_dist, y_input: batch_y_l, x_input_l: batch_x_l,
-                                       categorial_distribution: real_cat_dist})
-                        #writer.add_summary(summary, global_step=step)
-                        print("Epoch: {}, iteration: {}".format(i, b))
-                        print("Autoencoder Loss: {}".format(a_loss))
-                        print("Discriminator Gauss Loss: {}".format(d_g_loss))
-                        print("Discriminator Categorical Loss: {}".format(d_c_loss))
-                        print("Generator Loss: {}".format(g_loss))
-                        print("Supervised Loss: {}\n".format(s_loss))
-                        with open(log_path + '/log.txt', 'a') as log:
-                            log.write("Epoch: {}, iteration: {}\n".format(i, b))
-                            log.write("Autoencoder Loss: {}\n".format(a_loss))
-                            log.write("Discriminator Gauss Loss: {}".format(d_g_loss))
-                            log.write("Discriminator Categorical Loss: {}".format(d_c_loss))
-                            log.write("Generator Loss: {}\n".format(g_loss))
-                            log.write("Supervised Loss: {}".format(s_loss))
-                    step += 1
-                acc = 0
-                num_batches = int(mnist.validation.num_examples/batch_size)
-                for j in range(num_batches):
-                    # Classify unseen validation data instead of test data or train data
-                    batch_x_l, batch_y_l = mnist.validation.next_batch(batch_size=batch_size)
-                    encoder_acc = sess.run(accuracy, feed_dict={x_input_l: batch_x_l, y_input: batch_y_l})
-                    acc += encoder_acc
-                acc /= num_batches
-                print("Encoder Classification Accuracy: {}".format(acc))
-                with open(log_path + '/log.txt', 'a') as log:
-                    log.write("Encoder Classification Accuracy: {}".format(acc))
-                saver.save(sess, save_path=saved_model_path, global_step=step)
-        else:
-            # Get the latest results folder
-            all_results = os.listdir(results_path)
-            all_results.sort()
-            saver.restore(sess, save_path=tf.train.latest_checkpoint(results_path + '/' +
-                                                                     all_results[-1] + '/Saved_models/'))
-            generate_image_grid(sess, op=decoder_image)
+        all_sess_mask = dataset_auto['session'] == session
+        enc_sess_mask = dataset_enc['session'] == session
+        X_tul = dataset_auto['X'][~all_sess_mask]
+        print "number of samples = ", X_tul.shape[0]
+        X_tl= dataset_enc['X'][~enc_sess_mask]
+        y_tl = dataset_enc['y'][~enc_sess_mask]
+        X_vl = dataset_enc['X'][enc_sess_mask]
+        y_vl = dataset_enc['y'][enc_sess_mask]
+        y_test_labeled_cat = np.eye(n_labels)[y_vl]
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Autoencoder Train Parameter")
-    parser.add_argument('--train', '-t', type=bool, default=True,
-                        help='Set to True to train a new model, False to load weights and display image grid')
-    args = parser.parse_args()
-    train(train_model=args.train)
 
+        # Saving the model
+        step = 0
+        sess = tf.Session()
+        sess.run(init)
+
+        #x_l, y_l = mnist.test.next_batch(n_labeled)
+
+        for i in range(n_epochs):
+            n_batches = int(n_labeled / batch_size)
+            print("------------------Epoch {}/{}------------------".format(i, n_epochs))
+            for b in range(1, n_batches + 1):
+                z_real_dist = np.random.randn(batch_size, z_dim) * 5.
+                real_cat_dist = np.random.randint(low=0, high=2, size=batch_size)
+                real_cat_dist = np.eye(n_labels)[real_cat_dist]
+                #batch_x_ul, _ = mnist.train.next_batch(batch_size)
+
+                batch_x_ul = next_batch(X_tul, batch_size)
+
+                batch_x_l, batch_y_l = next_batch(X_tl, batch_size, y_tl)
+
+                batch_y_l_cat = np.eye(n_labels)[batch_y_l]
+
+                sess.run(autoencoder_optimizer, feed_dict={x_input: batch_x_ul, x_target: batch_x_ul})
+                sess.run(discriminator_g_optimizer,
+                         feed_dict={x_input: batch_x_ul, x_target: batch_x_ul, real_distribution: z_real_dist})
+                sess.run(discriminator_c_optimizer,
+                         feed_dict={x_input: batch_x_ul, x_target: batch_x_ul,
+                                    categorial_distribution: real_cat_dist})
+                sess.run(generator_optimizer, feed_dict={x_input: batch_x_ul, x_target: batch_x_ul})
+                sess.run(supervised_encoder_optimizer, feed_dict={x_input_l: batch_x_l, y_input: batch_y_l_cat})
+
+
+                if b % 20 == 0:
+
+                    a_loss, d_g_loss, d_c_loss, g_loss, s_loss = sess.run(
+                        [autoencoder_loss, dc_g_loss, dc_c_loss, generator_loss, supervised_encoder_loss],
+                        feed_dict={x_input: batch_x_ul, x_target: batch_x_ul,
+                                   real_distribution: z_real_dist, y_input: batch_y_l_cat, x_input_l: batch_x_l,
+                                   categorial_distribution: real_cat_dist})
+
+
+                    #writer.add_summary(summary, global_step=step)
+                    # print("Epoch: {}, iteration: {}".format(i, b))
+                    # print("Autoencoder Loss: {}".format(a_loss))
+                    # print("Discriminator Gauss Loss: {}".format(d_g_loss))
+                    # print("Discriminator Categorical Loss: {}".format(d_c_loss))
+                    # print("Generator Loss: {}".format(g_loss))
+                    # print("Supervised Loss: {}\n".format(s_loss))
+                step += 1
+            acc = 0
+            num_batches = int(X_tl.shape[0]/batch_size)
+
+        y_tl_cat = np.eye(n_labels)[y_tl]
+        y_vl_cat = np.eye(n_labels)[y_vl]
+        encoder_train_pred = sess.run(encoder_output_label_, feed_dict = {x_input_l:X_tl, y_input:y_tl_cat})
+        encoder_val_pred = sess.run(encoder_output_label_, feed_dict = {x_input_l:X_vl, y_input:y_vl_cat})
+
+        probs_all.append(encoder_val_pred[:,1])
+        y_all.append(y_vl)
+
+
+
+
+
+
+
+
+    label_all = np.concatenate(y_all)
+    probs_all = np.concatenate(probs_all)
+    auc_auto = sklearn.metrics.roc_auc_score(label_all,probs_all)
+    print "auto auc", auc_auto
+    print "current auc", result_current

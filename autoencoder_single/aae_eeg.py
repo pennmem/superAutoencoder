@@ -37,15 +37,15 @@ args = sys.argv
 print args
 index = int(args[1])
 denoising = args[2]
+n_hidden = int(args[3])
 
 rhino_root = '/Volumes/RHINO'
 all_subjects = np.array(os.listdir(rhino_root + '/scratch/tphan/joint_classifier/FR1/'))
-
-
-
 subject = all_subjects[index]
-print subject
-#subject = 'R1415T'
+
+
+#print subject
+subject = 'R1391T'
 
 subject_dir = rhino_root + '/scratch/tphan/joint_classifier/FR1/' + subject + '/dataset.pkl'
 dataset = joblib.load(subject_dir)
@@ -61,12 +61,12 @@ result_current = run_loso_xval(dataset_enc, classifier_name = 'current', search_
 print "current result", result_current
 
 dataset_auto = get_session_data(subject, rhino_root)
-dataset_auto['X'] = normalize_sessions(dataset_auto['X'], dataset_auto['session'])
+#dataset_auto['X'] = normalize_sessions(dataset_auto['X'], dataset_auto['session'])
 dataset_enc = select_phase(dataset)
 
 
-#print dataset_enc['X'].min(), dataset_enc['X'].max()
-#print dataset_auto['X'].min(), dataset_auto['X'].max()
+print dataset_enc['X'].min(), dataset_enc['X'].max()
+print dataset_auto['X'].min(), dataset_auto['X'].max()
 
 dataset_enc['X'] = scale_sessions(dataset_enc['X'], dataset_enc['session'], dataset_enc['X'], dataset_enc['session'])
 dataset_auto['X'] = scale_sessions(dataset_auto['X'], dataset_auto['session'], dataset_auto['X'], dataset_auto['session'])
@@ -94,9 +94,13 @@ y_ref = dataset_ref['y']
 C_ref = dataset_ref['X']
 
 
+
+
 if len(sessions) > 1:
     for sess in sessions:
 
+        val_acc_list = []
+        train_acc_list = []
 
         session = dataset_auto['session']
         session_mask = dataset_auto['session'] != sess
@@ -120,13 +124,14 @@ if len(sessions) > 1:
         discriminator= build_discriminator(latent_dim)
         optimizer = Adam(0.0002, 0.5)
         discriminator.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
-        encoder = build_encoder(input_dim, latent_dim)
-        decoder = build_decoder(output_dim, latent_dim)
+        encoder, encoder_cat = build_encoder(input_dim, latent_dim, n_hidden=1)
+        decoder = build_decoder(output_dim, latent_dim, n_hidden=1)
 
 
         input_noise = Input(shape = (input_dim,))
         encoded_repr = encoder(input_noise)
         reconstructed_input = decoder(encoded_repr)
+
 
         print latent_dim
         L2_classifier = soft_max_classifier(latent_dim)
@@ -139,9 +144,11 @@ if len(sessions) > 1:
         adversarial_autoencoder = Model(input_noise, outputs = [reconstructed_input, validity])
         adversarial_autoencoder.compile(loss = ['mse', 'binary_crossentropy'], loss_weights=[0.99,0.01], optimizer = optimizer)
 
-        for l in range(3):
-            encoder.layers[l].trainable = False
-        encoder.layers[4].trainable = True
+        # n_encoders_layers = len(encoder.layers)
+        # for l in range(n_encoders_layers-2):
+        #     encoder.layers[l].trainable = False
+
+
         y_tilde = L2_classifier(encoded_repr)
         classifier_tune = Model(input_noise, y_tilde)
         print classifier_tune.summary()
@@ -159,7 +166,7 @@ if len(sessions) > 1:
         # adversarial ground truth
         valid = np.ones((batch_size,1))
         fake = np.zeros((batch_size,1))
-        n_epochs = 1000
+        n_epochs = 300
         n_iter = n_epochs*train_data_enc.shape[0]/batch_size
 
         print("number of iterations {}".format(n_iter))
@@ -175,32 +182,32 @@ if len(sessions) > 1:
             idx = np.random.randint(0, X_train.shape[0], batch_size)
             imgs = X_train[idx]
 
-            idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
-            imgs = train_data_enc[idx]
+            # idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
+            # imgs = train_data_enc[idx]
+
             imgs_noise = imgs + sigma_noise*np.random.normal(size = imgs.shape)
             latent_fake = encoder.predict(imgs_noise)
-
-
             latent_real = np.random.normal(size = (batch_size, latent_dim))
-            # idx_ref =  np.random.randint(0, dataset_ref['X'].shape[0], batch_size)
-            # latent_real = dataset_ref['X'][idx_ref]
-
 
             # train discriminator
             d_loss_real = discriminator.train_on_batch(latent_real, valid)
             d_loss_fake = discriminator.train_on_batch(latent_fake, fake)
             d_loss = 0.5*np.add(d_loss_real, d_loss_fake)
+
             # train generator
             g_loss = adversarial_autoencoder.train_on_batch(imgs_noise, [imgs, valid])
 
 
-
+            # train classifier
             idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
             imgs_enc = train_data_enc[idx]
             imgs_enc_noise = imgs_enc + sigma_noise*np.random.normal(size = imgs_enc.shape)
             y_batch = train_data_label[idx]
-            c_loss = classifier_tune.train_on_batch(imgs_enc, y_batch, class_weight = class_weight)
+            c_loss = classifier_tune.train_on_batch(imgs_enc_noise, y_batch, class_weight = class_weight)
 
+
+            test_acc = classifier_tune.evaluate(test_data_enc, test_data_label_enc, verbose = False)
+            train_acc = classifier_tune.evaluate(train_data_enc, train_data_label, verbose = False)
 
             # idx = np.random.randint(0, C_ref.shape[0], batch_size)
             # C_ref_batch = C_ref[idx]
@@ -213,27 +220,14 @@ if len(sessions) > 1:
             # train classifier
             if epoch%200 == 0:
                 print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, mse: %f] [C loss: %f, acc: %f] [C_prior loss: %f, acc: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[0], g_loss[1], c_loss[0], c_loss[1], c_prior_loss[0], c_prior_loss[1]))
+                val_acc_list.append(test_acc[1])
+                train_acc_list.append(train_acc[1])
+
                 #sample_images(epoch, latent_dim, decoder, imgs)
                 #discriminator_grads = get_gradients(discriminator)
                 #adversarial_autoencoder_grads = get_gradients(adversarial_autoencoder)
                 #print discriminator_grads
                 #print adversarial_autoencoder_grads
-
-        # print "traing encoding data"
-        # for epoch in range(epochs):
-        #
-        #     idx = np.random.randint(0, train_data_enc.shape[0], batch_size)
-        #     imgs = train_data_enc[idx]
-        #     imgs_noise = imgs = sigma_noise*np.random.normal(size = imgs.shape)
-        #     latent_fake = encoder.predict(imgs)
-        #     latent_real = np.random.normal(size = (batch_size, latent_dim))
-        #     d_loss_real = discriminator.train_on_batch(latent_real, valid)
-        #     d_loss_fake = discriminator.train_on_batch(latent_fake, fake)
-        #     d_loss = 0.5*np.add(d_loss_real, d_loss_fake)
-        #     g_loss = adversarial_autoencoder.train_on_batch([imgs_noise, imgs], [imgs, valid])
-        #     if epoch%sample_interval == 0:
-        #         print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, mse: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[0], g_loss[1]))
-        #         #sample_images(epoch, latent_dim, decoder, imgs)
 
 
         #training_code = encoder.predict(train_data_enc)
@@ -253,9 +247,11 @@ if len(sessions) > 1:
 
         probs = classifier_tune.predict(test_data_enc)
         #probs = classifier.predict_proba(test_code)[:,1]
-        #print probs
         probs_all.append(probs)
         label_all.append(test_data_label_enc)
+
+
+
 
     label_all = np.concatenate(label_all)
     probs_all = np.concatenate(probs_all)
@@ -283,7 +279,5 @@ from scipy import stats, integrate
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots(1,1)
 sns.set(color_codes= True)
-sns.distplot(training_code[:,0], ax = ax, color = 'green')
-sns.distplot(C_ref[:,0], ax = ax, color = 'red')
-
+sns.tsplot(val_acc_list, color = 'red')
 fig.savefig('test.pdf')

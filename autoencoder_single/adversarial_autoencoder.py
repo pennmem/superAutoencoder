@@ -13,61 +13,80 @@ from keras.optimizers import Adam
 from keras import losses
 from keras.utils import to_categorical
 import keras.backend as K
+from keras import regularizers
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 
-def build_encoder(input_dim, latent_dim):
+
+def build_encoder(input_dim, latent_dim, N = 128, n_classes = 2, penalty = 0, n_hidden = 1):
     input = Input(shape = (input_dim,))
-    h = Dense(128)(input)
+
+    for i in range(n_hidden):
+        if i ==0 :
+            h = Dense(N, kernel_regularizer=regularizers.l2(penalty))(input)
+        else:
+            h = Dense(N, kernel_regularizer=regularizers.l2(penalty))(h)
+
+        h = LeakyReLU(alpha=0.2)(h)
+        h = BatchNormalization()(h)
+        h = Dropout(0.4)(h)
+
+
+        # h = Dense(N)(input)
+        # h = LeakyReLU(alpha=0.2)(h)
+        # h = Dropout(0.4)(h)
+
+    # categorical model
+    y_cat = Dense(n_classes, activation= 'softmax')(h)  # softmax classifier
+
+    # latent code model
+    h = Dense(latent_dim)(h)
     h = LeakyReLU(alpha=0.2)(h)
-    #h = BatchNormalization()(h)
-    h = Dropout(0.4)(h)
-
-    # h = Dense(512)(h)
-    # h = LeakyReLU(alpha=0.2)(h)
-    mu = Dense(latent_dim)(h)
-    #log_var = Dense(latent_dim)(h)
-    #latent_repr = merge([mu, log_var], mode=lambda p: p[0] + K.random_normal(K.shape(p[0])) * K.exp(p[1] / 2),output_shape=lambda p: p[0])
-
-    model = Model(input, mu)
-    model.summary()
-
-    return model
+    model_encoder = Model(input, h)
+    model_cat = Model(input, y_cat)
+    model_encoder.summary()
+    return model_encoder, model_cat
 
 
 # fix this later
-def build_decoder(output_dim, latent_dim):
+def build_decoder(output_dim, code_dim, N = 128, activation = 'sigmoid', penalty = 0, n_hidden =1 ):
     model = Sequential()
-    model.add(Dense(128, input_dim = latent_dim))
-    model.add(LeakyReLU(alpha = 0.2))
-    #model.add(BatchNormalization())
 
-    model.add(Dropout(0.4))
-    # model.add(Dense(512))
-    # model.add(LeakyReLU(alpha=0.2))
-    model.add(Dense(output_dim, activation = 'tanh')) # normalize data between -1 and 1
+    for i in range(n_hidden):
+        if i == 0:
+            model.add(Dense(N, input_dim = code_dim, kernel_regularizer=regularizers.l2(penalty)))
+        else:
+            model.add(Dense(N, kernel_regularizer=regularizers.l2(penalty)))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.4))
+
+    #
+    # model.add(Dense(N))
+    # model.add(LeakyReLU(alpha = 0.2))
+    # model.add(Dropout(0.4))
+
+
+    model.add(Dense(output_dim, activation = activation)) # normalize data between -1 and 1
     model.summary()
-    z = Input(shape = (latent_dim,))
+    z = Input(shape = (code_dim,))
     output = model(z)
+    model_decoder = Model(z,output)
 
-    return Model(z, output)
+    return model_decoder
 
 
-def build_discriminator(latent_dim):
+def build_discriminator(latent_dim, N = 128):
     print "type of latent_dim", type(latent_dim)
 
 
     model = Sequential()
-    model.add(Dense(128, input_dim=latent_dim))
+    model.add(Dense(N, input_dim=latent_dim))
     model.add(LeakyReLU(alpha =0.2))
     model.add(Dropout(0.4))
-    # model.add(Dense(256))
-    # model.add(LeakyReLU(alpha=0.2))
-    # model.add(Dropout(0.4))
-
     model.add(Dense(1, activation = 'sigmoid'))
     model.summary()
     encoded_repr = Input(shape = (latent_dim,))

@@ -4,6 +4,7 @@
 import os
 import numpy as np
 from sklearn.externals import joblib
+import matplotlib
 
 
 rhino_root = '/Volumes/RHINO'
